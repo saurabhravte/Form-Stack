@@ -279,7 +279,7 @@ export function FieldRenderer({ field, control, error }: Props) {
               );
             case 'welcome_screen':
             case 'statement':
-              return null; // displayed via label/helpText only
+             return <></>;// displayed via label/helpText only
             default:
               return (
                 <Input

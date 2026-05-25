@@ -55,7 +55,7 @@ export default function SignUpPage() {
   const register = trpc.auth.register.useMutation({
     onSuccess: (res) => {
       setSession(res.user, res.workspaceId);
-      toast.success(`Workspace ${res.workspaceSlug} created`);
+      toast.success(`Workspace ${step3.getValues('workspaceSlug')} created`);
       router.push('/dashboard');
     },
     onError: (err) => {

@@ -405,7 +405,7 @@ interface RightRailProps {
   updateField: (patch: Partial<BuilderField>) => void;
   onCloseSelected: () => void;
   themeId: string;
-  themes: { id: string; name?: string; tokens: Record<string, string> }[];
+  themes: { id: string; name: string; tokens: Record<string, string> }[];
   onThemeChange: (id: string) => void;
   form: { id: string; slug: string; status: string; visibility: string };
 }
