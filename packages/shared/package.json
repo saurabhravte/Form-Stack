@@ -1,0 +1,27 @@
+{
+  "name": "@formstack/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./schemas": "./src/schemas.ts",
+    "./fields": "./src/fields.ts",
+    "./themes": "./src/themes.ts",
+    "./constants": "./src/constants.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@formstack/eslint-config": "workspace:*",
+    "@formstack/typescript-config": "workspace:*",
+    "typescript": "^5.5.4"
+  }
+}
