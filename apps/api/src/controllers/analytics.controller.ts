@@ -6,7 +6,7 @@ import { db, formEvents, forms, responses } from '../db';
 import { BaseController } from './base.controller';
 import { formController } from './form.controller';
 
-interface OverviewRow {
+export interface OverviewRow {
   formId: string;
   totalViews: number;
   uniqueViews: number;

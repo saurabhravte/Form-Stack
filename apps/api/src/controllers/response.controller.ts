@@ -9,12 +9,12 @@ import { emailService } from '../services/email.service';
 import { BaseController } from './base.controller';
 import { formController } from './form.controller';
 
-interface SubmitContext {
+export interface SubmitContext {
   ipAddress?: string;
   userAgent?: string;
 }
 
-interface FormField {
+export interface FormField {
   id: string;
   kind: string;
   required: boolean;

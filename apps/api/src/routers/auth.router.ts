@@ -47,6 +47,7 @@ export const authRouter = router({
         email: ctx.user.email,
         name: ctx.user.name,
         avatarUrl: ctx.user.avatarUrl,
+        createdAt: ctx.user.createdAt.toISOString(),
       },
       workspaceId,
     };
