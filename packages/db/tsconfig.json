@@ -1,0 +1,5 @@
+{
+  "extends": "@formstack/typescript-config/node.json",
+  "include": ["src", "drizzle.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@formstack/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./seed": "./src/seed.ts"
+  },
+  "scripts": {
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/seed.ts",
+    "lint": "eslint src",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@formstack/shared": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "drizzle-orm": "^0.33.0",
+    "drizzle-zod": "^0.5.1",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@formstack/eslint-config": "workspace:*",
+    "@formstack/typescript-config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.10",
+    "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.24.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}
