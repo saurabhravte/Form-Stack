@@ -14,26 +14,27 @@ import { db, sessions, users, workspaceMembers, workspaces, type UserRow } from 
 
 import { BaseController } from './base.controller';
 
-interface SessionContext {
+export interface SessionContext {
   userAgent?: string;
   ipAddress?: string;
 }
 
-interface AuthResult {
+ export interface AuthResult {
   user: PublicUserShape;
   workspaceId: string;
   token: string;
   cookie: CookieDirective;
 }
 
-interface PublicUserShape {
+export interface PublicUserShape {
   id: string;
   email: string;
   name: string;
   avatarUrl: string | null;
+  createdAt: string; 
 }
 
-interface CookieDirective {
+export interface CookieDirective {
   name: string;
   value: string;
   options: {
@@ -228,6 +229,7 @@ export class AuthController extends BaseController {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt.toISOString(), 
     };
   }
 
