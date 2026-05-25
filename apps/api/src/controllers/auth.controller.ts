@@ -1,13 +1,18 @@
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID, createHash } from 'node:crypto';
 
-import { ApiError, COOKIE_NAME, type LoginInput, type RegisterInput } from "@formstack/shared";
-import bcrypt from "bcryptjs";
-import { and, eq, isNull } from "drizzle-orm";
-import jwt from "jsonwebtoken";
+import {
+  ApiError,
+  COOKIE_NAME,
+  type LoginInput,
+  type RegisterInput,
+} from '@formstack/shared';
+import bcrypt from 'bcryptjs';
+import { and, eq, isNull } from 'drizzle-orm';
+import jwt from 'jsonwebtoken';
 
-import { db, sessions, users, workspaceMembers, workspaces, type UserRow } from "../db";
+import { db, sessions, users, workspaceMembers, workspaces, type UserRow } from '../db';
 
-import { BaseController } from "./base.controller";
+import { BaseController } from './base.controller';
 
 interface SessionContext {
   userAgent?: string;
@@ -34,8 +39,8 @@ interface CookieDirective {
   options: {
     httpOnly: true;
     secure: boolean;
-    sameSite: "lax" | "strict" | "none";
-    path: "/";
+    sameSite: 'lax' | 'strict' | 'none';
+    path: '/';
     maxAge: number;
     domain?: string;
   };
@@ -52,36 +57,36 @@ export class AuthController extends BaseController {
     super();
     const secret = process.env.JWT_SECRET;
     if (!secret || secret.length < 32) {
-      throw new Error("JWT_SECRET must be set and at least 32 characters");
+      throw new Error('JWT_SECRET must be set and at least 32 characters');
     }
     this.jwtSecret = secret;
-    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "7d";
-
+    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
+    // Browsers reject explicit `Domain=localhost` (and a few similar bare hostnames),
+    // which silently breaks sign-in in dev. Leave the cookie host-only in those cases.
     const rawDomain = process.env.COOKIE_DOMAIN;
     this.cookieDomain =
-      rawDomain && rawDomain !== "localhost" && !rawDomain.startsWith("127.")
+      rawDomain && rawDomain !== 'localhost' && !rawDomain.startsWith('127.')
         ? rawDomain
         : undefined;
     this.sessionTtlMs = 7 * 24 * 60 * 60 * 1000;
-    this.isProd = process.env.NODE_ENV === "production";
+    this.isProd = process.env.NODE_ENV === 'production';
   }
 
-
+  /** Sign-up — creates user + workspace + membership + session in one transaction. */
   async register(input: RegisterInput, ctx: SessionContext = {}): Promise<AuthResult> {
     const existing = await db
       .select({ id: users.id })
       .from(users)
       .where(eq(users.email, input.email.toLowerCase()))
       .limit(1);
-    if (existing.length) throw ApiError.conflict("An account with this email already exists");
+    if (existing.length) throw ApiError.conflict('An account with this email already exists');
 
     const slugTaken = await db
       .select({ id: workspaces.id })
       .from(workspaces)
       .where(eq(workspaces.slug, input.workspaceSlug.toLowerCase()))
       .limit(1);
-    if (slugTaken.length)
-      throw ApiError.conflict("That workspace URL is taken", { field: "workspaceSlug" });
+    if (slugTaken.length) throw ApiError.conflict('That workspace URL is taken', { field: 'workspaceSlug' });
 
     const passwordHash = await bcrypt.hash(input.password, 12);
 
@@ -93,7 +98,7 @@ export class AuthController extends BaseController {
         passwordHash,
       })
       .returning();
-    if (!user) throw ApiError.internal("Failed to create user");
+    if (!user) throw ApiError.internal('Failed to create user');
 
     const [workspace] = await db
       .insert(workspaces)
@@ -101,15 +106,15 @@ export class AuthController extends BaseController {
         name: input.workspaceName,
         slug: input.workspaceSlug.toLowerCase(),
         ownerId: user.id,
-        plan: "free",
+        plan: 'free',
       })
       .returning();
-    if (!workspace) throw ApiError.internal("Failed to create workspace");
+    if (!workspace) throw ApiError.internal('Failed to create workspace');
 
     await db.insert(workspaceMembers).values({
       workspaceId: workspace.id,
       userId: user.id,
-      role: "owner",
+      role: 'owner',
     });
 
     const { token } = await this.issueSession(user, ctx);
@@ -130,10 +135,10 @@ export class AuthController extends BaseController {
       .where(eq(users.email, input.email.toLowerCase()))
       .limit(1);
 
-    if (!user) throw ApiError.unauthorized("Invalid email or password");
+    if (!user) throw ApiError.unauthorized('Invalid email or password');
 
     const ok = await bcrypt.compare(input.password, user.passwordHash);
-    if (!ok) throw ApiError.unauthorized("Invalid email or password");
+    if (!ok) throw ApiError.unauthorized('Invalid email or password');
 
     const [membership] = await db
       .select({ workspaceId: workspaceMembers.workspaceId })
@@ -145,7 +150,7 @@ export class AuthController extends BaseController {
 
     return {
       user: this.toPublicUser(user),
-      workspaceId: membership?.workspaceId ?? "",
+      workspaceId: membership?.workspaceId ?? '',
       token,
       cookie: this.cookieDirective(token),
     };
@@ -163,7 +168,12 @@ export class AuthController extends BaseController {
     return this.clearCookieDirective();
   }
 
- 
+  /**
+   * Verify a JWT and validate the matching session is still alive.
+   * Returns the user row; throws ApiError.unauthorized on any failure.
+   *
+   * The auth middleware calls this on every protected request.
+   */
   async verify(token: string | undefined): Promise<UserRow> {
     if (!token) throw ApiError.unauthorized();
 
@@ -171,7 +181,7 @@ export class AuthController extends BaseController {
     try {
       payload = jwt.verify(token, this.jwtSecret) as typeof payload;
     } catch {
-      throw ApiError.unauthorized("Session expired, please sign in again");
+      throw ApiError.unauthorized('Session expired, please sign in again');
     }
 
     const tokenHash = this.hashToken(token);
@@ -180,8 +190,8 @@ export class AuthController extends BaseController {
       .from(sessions)
       .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt)))
       .limit(1);
-    if (!session) throw ApiError.unauthorized("Session no longer valid");
-    if (session.expiresAt < new Date()) throw ApiError.unauthorized("Session expired");
+    if (!session) throw ApiError.unauthorized('Session no longer valid');
+    if (session.expiresAt < new Date()) throw ApiError.unauthorized('Session expired');
 
     const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1);
     if (!user) throw ApiError.unauthorized();
@@ -191,10 +201,7 @@ export class AuthController extends BaseController {
 
   // ---- internals -------------------------------------------------
 
-  private async issueSession(
-    user: UserRow,
-    ctx: SessionContext,
-  ): Promise<{ token: string; sessionId: string }> {
+  private async issueSession(user: UserRow, ctx: SessionContext): Promise<{ token: string; sessionId: string }> {
     const sessionId = randomUUID();
     const token = jwt.sign({ sub: user.id, sid: sessionId }, this.jwtSecret, {
       expiresIn: this.jwtExpiresIn,
@@ -212,7 +219,7 @@ export class AuthController extends BaseController {
   }
 
   private hashToken(token: string): string {
-    return createHash("sha256").update(token).digest("hex");
+    return createHash('sha256').update(token).digest('hex');
   }
 
   private toPublicUser(user: UserRow): PublicUserShape {
@@ -231,8 +238,8 @@ export class AuthController extends BaseController {
       options: {
         httpOnly: true,
         secure: this.isProd,
-        sameSite: this.isProd ? "none" : "lax",
-        path: "/",
+        sameSite: this.isProd ? 'none' : 'lax',
+        path: '/',
         maxAge: this.sessionTtlMs,
         ...(this.cookieDomain ? { domain: this.cookieDomain } : {}),
       },
@@ -252,12 +259,12 @@ export class AuthController extends BaseController {
   private clearCookieDirective(): CookieDirective {
     return {
       name: COOKIE_NAME,
-      value: "",
+      value: '',
       options: {
         httpOnly: true,
         secure: this.isProd,
-        sameSite: this.isProd ? "none" : "lax",
-        path: "/",
+        sameSite: this.isProd ? 'none' : 'lax',
+        path: '/',
         maxAge: 0,
         ...(this.cookieDomain ? { domain: this.cookieDomain } : {}),
       },

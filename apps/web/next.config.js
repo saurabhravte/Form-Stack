@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['@formstack/shared'],
+  eslint: {
+    dirs: ['src'],
+  },
+};
 
-export default nextConfig;
+module.exports = nextConfig;

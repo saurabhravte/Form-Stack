@@ -1,18 +1,23 @@
-import { SubmitResponseSchema } from "@formstack/shared";
-import { z } from "zod";
+import { SubmitResponseSchema } from '@formstack/shared';
+import { z } from 'zod';
 
-import { analyticsController } from "../controllers/analytics.controller";
-import { responseController } from "../controllers/response.controller";
+import { analyticsController } from '../controllers/analytics.controller';
+import { responseController } from '../controllers/response.controller';
 
-import { protectedProcedure, publicProcedure, router } from "../trpc/context";
+import { protectedProcedure, publicProcedure, router } from '../trpc/context';
 
 export const responsesRouter = router({
+  /**
+   * Public — anyone can submit. Rate limiting is enforced at the Express
+   * layer in `apps/api/src/middlewares/rate-limit.ts`.
+   */
   submit: publicProcedure
     .input(SubmitResponseSchema)
     .mutation(({ ctx, input }) =>
       responseController.submit(input, { ipAddress: ctx.ipAddress, userAgent: ctx.userAgent }),
     ),
 
+  /** Creator-only. */
   listForForm: protectedProcedure
     .input(
       z.object({
@@ -37,26 +42,20 @@ export const analyticsRouter = router({
     .query(({ ctx, input }) => analyticsController.overview(ctx.user.id, input.formId)),
 
   dailyResponses: protectedProcedure
-    .input(
-      z.object({ formId: z.string().uuid(), days: z.number().int().min(1).max(180).default(30) }),
-    )
-    .query(({ ctx, input }) =>
-      analyticsController.dailyResponses(ctx.user.id, input.formId, input.days),
-    ),
+    .input(z.object({ formId: z.string().uuid(), days: z.number().int().min(1).max(180).default(30) }))
+    .query(({ ctx, input }) => analyticsController.dailyResponses(ctx.user.id, input.formId, input.days)),
 
   fieldCompletion: protectedProcedure
     .input(z.object({ formId: z.string().uuid() }))
     .query(({ ctx, input }) => analyticsController.fieldCompletion(ctx.user.id, input.formId)),
 
   recordEvent: publicProcedure
-    .input(
-      z.object({
-        formId: z.string().uuid(),
-        type: z.enum(["view", "start", "field_seen", "field_completed", "submit", "drop"]),
-        fieldId: z.string().uuid().optional(),
-        sessionId: z.string().optional(),
-      }),
-    )
+    .input(z.object({
+      formId: z.string().uuid(),
+      type: z.enum(['view', 'start', 'field_seen', 'field_completed', 'submit', 'drop']),
+      fieldId: z.string().uuid().optional(),
+      sessionId: z.string().optional(),
+    }))
     .mutation(({ input }) => analyticsController.recordEvent(input)),
 
   exportCsv: protectedProcedure

@@ -1,10 +1,10 @@
-import { ApiError } from "@formstack/shared";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { ApiError } from '@formstack/shared';
+import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
-import { db, formEvents, forms, responses } from "../db";
+import { db, formEvents, forms, responses } from '../db';
 
-import { BaseController } from "./base.controller";
-import { formController } from "./form.controller";
+import { BaseController } from './base.controller';
+import { formController } from './form.controller';
 
 interface OverviewRow {
   formId: string;
@@ -26,7 +26,7 @@ export class AnalyticsController extends BaseController {
         unique: sql<number>`COUNT(DISTINCT ${formEvents.sessionId})::int`,
       })
       .from(formEvents)
-      .where(and(eq(formEvents.formId, form.id), eq(formEvents.type, "view")));
+      .where(and(eq(formEvents.formId, form.id), eq(formEvents.type, 'view')));
 
     const [responseAgg] = await db
       .select({
@@ -82,7 +82,7 @@ export class AnalyticsController extends BaseController {
     return fields.map((f) => {
       const completed = allResponses.filter((r) => {
         const a = r.answers.find((x) => x.fieldId === f.id);
-        return a !== undefined && a.value !== null && a.value !== "";
+        return a !== undefined && a.value !== null && a.value !== '';
       }).length;
       const rate = allResponses.length ? completed / allResponses.length : 0;
       return {
@@ -96,6 +96,7 @@ export class AnalyticsController extends BaseController {
     });
   }
 
+  /** CSV export. Streams not implemented here — we build a string and let the route ship it. */
   async exportCsv(userId: string, formId: string): Promise<string> {
     const form = await formController.getById(userId, formId);
     const fields = (form.fields as Array<{ id: string; label: string }>) ?? [];
@@ -106,31 +107,25 @@ export class AnalyticsController extends BaseController {
       .where(eq(responses.formId, form.id))
       .orderBy(desc(responses.createdAt));
 
-    const header = ["Submitted at", ...fields.map((f) => f.label.replace(/"/g, '""'))];
-    const lines = [header.map((h) => `"${h}"`).join(",")];
+    const header = ['Submitted at', ...fields.map((f) => f.label.replace(/"/g, '""'))];
+    const lines = [header.map((h) => `"${h}"`).join(',')];
 
     for (const r of rows) {
-      const cells = [
-        r.createdAt.toISOString(),
-        ...fields.map((f) => {
-          const a = r.answers.find((x) => x.fieldId === f.id);
-          const v = a?.value;
-          if (v === null || v === undefined) return "";
-          return typeof v === "string" ? v : JSON.stringify(v);
-        }),
-      ];
-      lines.push(cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
+      const cells = [r.createdAt.toISOString(), ...fields.map((f) => {
+        const a = r.answers.find((x) => x.fieldId === f.id);
+        const v = a?.value;
+        if (v === null || v === undefined) return '';
+        return typeof v === 'string' ? v : JSON.stringify(v);
+      })];
+      lines.push(cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','));
     }
-    return lines.join("\n");
+    return lines.join('\n');
   }
 
+  /** Record an analytics event (called from the public form page on view/start/etc). */
   async recordEvent(input: { formId: string; type: string; fieldId?: string; sessionId?: string }) {
-    const [form] = await db
-      .select({ id: forms.id })
-      .from(forms)
-      .where(eq(forms.id, input.formId))
-      .limit(1);
-    if (!form) throw ApiError.notFound("Form not found");
+    const [form] = await db.select({ id: forms.id }).from(forms).where(eq(forms.id, input.formId)).limit(1);
+    if (!form) throw ApiError.notFound('Form not found');
     await db.insert(formEvents).values({
       formId: form.id,
       type: input.type,

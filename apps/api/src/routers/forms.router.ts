@@ -1,11 +1,16 @@
-import { CreateFormSchema, PublishFormSchema, UpdateFormSchema } from "@formstack/shared";
-import { z } from "zod";
+import {
+  CreateFormSchema,
+  PublishFormSchema,
+  UpdateFormSchema,
+} from '@formstack/shared';
+import { z } from 'zod';
 
-import { formController } from "../controllers/form.controller";
+import { formController } from '../controllers/form.controller';
 
-import { protectedProcedure, publicProcedure, router } from "../trpc/context";
+import { protectedProcedure, publicProcedure, router } from '../trpc/context';
 
 export const formsRouter = router({
+  // ---- Authenticated (creator) routes ----
   listMine: protectedProcedure
     .input(z.object({ workspaceId: z.string().uuid() }))
     .query(({ ctx, input }) => formController.listByWorkspace(ctx.user.id, input.workspaceId)),
@@ -42,12 +47,9 @@ export const formsRouter = router({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(({ ctx, input }) => formController.clone(ctx.user.id, input.id)),
 
+  // ---- Public routes (no auth) ----
   listPublic: publicProcedure
-    .input(
-      z
-        .object({ limit: z.number().min(1).max(50).default(24), cursor: z.string().nullish() })
-        .optional(),
-    )
+    .input(z.object({ limit: z.number().min(1).max(50).default(24), cursor: z.string().nullish() }).optional())
     .query(({ input }) => formController.listPublic(input?.limit, input?.cursor ?? undefined)),
 
   getPublicBySlug: publicProcedure

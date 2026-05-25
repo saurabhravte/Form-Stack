@@ -1,23 +1,33 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
-  "ui": "tui",
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "JWT_EXPIRES_IN",
+    "COOKIE_DOMAIN",
+    "WEB_URL",
+    "API_URL",
+    "PORT",
+    "RESEND_API_KEY",
+    "RATE_LIMIT_WINDOW_MS",
+    "RATE_LIMIT_MAX"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "db:generate": {},
-    "db:migrate": {}
+    }
   }
 }

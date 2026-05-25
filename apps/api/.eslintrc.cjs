@@ -1,1 +1,1 @@
-module.exports = { extends: ["@formstack/eslint-config/node"] };
+module.exports = { extends: ['@formstack/eslint-config/node'] };

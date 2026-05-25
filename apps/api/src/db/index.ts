@@ -1,1 +1,1 @@
-export * from "@formstack/db";
+export * from '@formstack/db';

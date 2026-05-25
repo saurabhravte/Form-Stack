@@ -1,3 +1,13 @@
+/**
+ * ApiError — single source of truth for all errors thrown inside the backend.
+ *
+ * Controllers throw `ApiError`. The global error middleware catches it and
+ * shapes a uniform JSON response (or tRPC error) so the client always
+ * receives the same envelope.
+ *
+ * Never `throw new Error('...')` in business logic — always use ApiError so the
+ * status code, error code, and details are preserved end-to-end.
+ */
 export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
@@ -15,7 +25,7 @@ export class ApiError extends Error {
     } = {},
   ) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.statusCode = statusCode;
     this.code = options.code ?? defaultCodeForStatus(statusCode);
     this.details = options.details;
@@ -37,64 +47,69 @@ export class ApiError extends Error {
   }
 
   // ---- Named factories — read better than passing magic numbers ----
-  static badRequest(message = "Bad request", details?: unknown) {
-    return new ApiError(400, message, { code: "BAD_REQUEST", details });
+  static badRequest(message = 'Bad request', details?: unknown) {
+    return new ApiError(400, message, { code: 'BAD_REQUEST', details });
   }
-  static unauthorized(message = "Authentication required") {
-    return new ApiError(401, message, { code: "UNAUTHORIZED" });
+  static unauthorized(message = 'Authentication required') {
+    return new ApiError(401, message, { code: 'UNAUTHORIZED' });
   }
-  static forbidden(message = "You do not have permission to perform this action") {
-    return new ApiError(403, message, { code: "FORBIDDEN" });
+  static forbidden(message = 'You do not have permission to perform this action') {
+    return new ApiError(403, message, { code: 'FORBIDDEN' });
   }
-  static notFound(message = "Resource not found") {
-    return new ApiError(404, message, { code: "NOT_FOUND" });
+  static notFound(message = 'Resource not found') {
+    return new ApiError(404, message, { code: 'NOT_FOUND' });
   }
-  static conflict(message = "Resource already exists", details?: unknown) {
-    return new ApiError(409, message, { code: "CONFLICT", details });
+  static conflict(message = 'Resource already exists', details?: unknown) {
+    return new ApiError(409, message, { code: 'CONFLICT', details });
   }
-  static gone(message = "Resource is no longer available") {
-    return new ApiError(410, message, { code: "GONE" });
+  static gone(message = 'Resource is no longer available') {
+    return new ApiError(410, message, { code: 'GONE' });
   }
-  static unprocessable(message = "Validation failed", details?: unknown) {
-    return new ApiError(422, message, { code: "UNPROCESSABLE_ENTITY", details });
+  static unprocessable(message = 'Validation failed', details?: unknown) {
+    return new ApiError(422, message, { code: 'UNPROCESSABLE_ENTITY', details });
   }
-  static tooMany(message = "Too many requests, slow down") {
-    return new ApiError(429, message, { code: "RATE_LIMITED" });
+  static tooMany(message = 'Too many requests, slow down') {
+    return new ApiError(429, message, { code: 'RATE_LIMITED' });
   }
-  static internal(message = "Internal server error", cause?: unknown) {
-    return new ApiError(500, message, { code: "INTERNAL_ERROR", cause, isOperational: false });
+  static internal(message = 'Internal server error', cause?: unknown) {
+    return new ApiError(500, message, { code: 'INTERNAL_ERROR', cause, isOperational: false });
   }
 }
 
 function defaultCodeForStatus(status: number): string {
   switch (status) {
     case 400:
-      return "BAD_REQUEST";
+      return 'BAD_REQUEST';
     case 401:
-      return "UNAUTHORIZED";
+      return 'UNAUTHORIZED';
     case 403:
-      return "FORBIDDEN";
+      return 'FORBIDDEN';
     case 404:
-      return "NOT_FOUND";
+      return 'NOT_FOUND';
     case 409:
-      return "CONFLICT";
+      return 'CONFLICT';
     case 410:
-      return "GONE";
+      return 'GONE';
     case 422:
-      return "UNPROCESSABLE_ENTITY";
+      return 'UNPROCESSABLE_ENTITY';
     case 429:
-      return "RATE_LIMITED";
+      return 'RATE_LIMITED';
     default:
-      return status >= 500 ? "INTERNAL_ERROR" : "ERROR";
+      return status >= 500 ? 'INTERNAL_ERROR' : 'ERROR';
   }
 }
 
+/**
+ * ApiResponse — unified success envelope used by REST routes.
+ * tRPC procedures can `return ApiResponse.ok(data).body` if you want the
+ * same shape (or just return raw data; tRPC handles its own envelope).
+ */
 export class ApiResponse<T> {
   public readonly success = true as const;
   constructor(
     public readonly statusCode: number,
     public readonly data: T,
-    public readonly message: string = "OK",
+    public readonly message: string = 'OK',
     public readonly meta?: Record<string, unknown>,
   ) {}
 
@@ -107,17 +122,17 @@ export class ApiResponse<T> {
     };
   }
 
-  static ok<T>(data: T, message = "OK", meta?: Record<string, unknown>) {
+  static ok<T>(data: T, message = 'OK', meta?: Record<string, unknown>) {
     return new ApiResponse(200, data, message, meta);
   }
-  static created<T>(data: T, message = "Created") {
+  static created<T>(data: T, message = 'Created') {
     return new ApiResponse(201, data, message);
   }
-  static accepted<T>(data: T, message = "Accepted") {
+  static accepted<T>(data: T, message = 'Accepted') {
     return new ApiResponse(202, data, message);
   }
   static noContent() {
-    return new ApiResponse(204, null, "No content");
+    return new ApiResponse(204, null, 'No content');
   }
 }
 
@@ -131,6 +146,6 @@ export const asyncHandler =
       return await fn(...args);
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      throw ApiError.internal(err instanceof Error ? err.message : "Unexpected error", err);
+      throw ApiError.internal(err instanceof Error ? err.message : 'Unexpected error', err);
     }
   };

@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Black-and-white as shades + crimson accent. Defaults to light. */
+@layer base {
+  :root {
+    --bg: 0 0% 100%;
+    --fg: 0 0% 6%;
+    --surface: 0 0% 98%;
+    --muted: 0 0% 96%;
+    --muted-fg: 0 0% 35%;
+    --border: 0 0% 90%;
+    --ring: 350 71% 50%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --bg: 0 0% 4%;
+    --fg: 0 0% 98%;
+    --surface: 0 0% 8%;
+    --muted: 0 0% 12%;
+    --muted-fg: 0 0% 65%;
+    --border: 0 0% 18%;
+    --ring: 350 71% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  body {
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings lean on Finlandica's display weight */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: #d7263d;
+    color: white;
+  }
+}
+
+@layer utilities {
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
