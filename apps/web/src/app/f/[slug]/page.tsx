@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { FieldRenderer, type RenderableField } from '@/components/forms/field-renderer';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
+import { getThemeDoodle, isLightColor, readableOn } from '@/lib/theme-utils';
 
 export default function PublicFormPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -26,7 +27,7 @@ export default function PublicFormPage() {
       try {
         recordEvent.mutate({ formId: formQuery.data!.id, type: 'submit', sessionId });
       } catch {
-        // noop
+        /* noop */
       }
     },
   });
@@ -44,7 +45,6 @@ export default function PublicFormPage() {
     ),
   });
 
-  // Record a view event the first time the form loads.
   useEffect(() => {
     if (formQuery.data && sessionId) {
       recordEvent.mutate({ formId: formQuery.data.id, type: 'view', sessionId });
@@ -52,16 +52,24 @@ export default function PublicFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formQuery.data?.id, sessionId]);
 
-  // Apply theme tokens as CSS variables on this page.
-  const theme = formQuery.data?.theme as { tokens?: Record<string, string> } | undefined;
-  const themeStyle = theme?.tokens
-    ? ({
-        '--theme-bg': theme.tokens.background,
-        '--theme-fg': theme.tokens.foreground,
-        '--theme-surface': theme.tokens.surface ?? theme.tokens.background,
-        '--theme-primary': theme.tokens.primary,
-      } as React.CSSProperties)
-    : undefined;
+  // Resolve theme tokens + readable fg
+  const theme = formQuery.data?.theme as
+    | { category?: string; tokens?: Record<string, string> }
+    | undefined;
+  const tokens = theme?.tokens ?? {};
+  const bg = tokens.background ?? '#FBF8F1';
+  const fg = readableOn(bg, tokens.foreground);
+  const primary = tokens.primary ?? '#D7263D';
+  const surface = tokens.surface ?? (isLightColor(bg) ? '#FFFFFF' : '#1A1D22');
+  const Doodle = getThemeDoodle(theme?.category);
+
+  const themeStyle = {
+    '--theme-bg': bg,
+    '--theme-fg': fg,
+    '--theme-surface': surface,
+    '--theme-primary': primary,
+    '--theme-border': isLightColor(bg) ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)',
+  } as React.CSSProperties;
 
   if (formQuery.isLoading) {
     return (
@@ -89,28 +97,28 @@ export default function PublicFormPage() {
   if (done) {
     return (
       <div
-        className="min-h-screen grid place-items-center px-4 text-center"
-        style={{
-          ...themeStyle,
-          background: theme?.tokens?.background ?? undefined,
-          color: theme?.tokens?.foreground ?? undefined,
-        }}
+        className="min-h-screen grid place-items-center px-4 text-center relative overflow-hidden"
+        style={{ ...themeStyle, background: bg, color: fg }}
       >
-        <div className="max-w-md animate-fade-in">
-          <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-600 grid place-items-center mx-auto mb-4">
+        <div className="absolute inset-0 pointer-events-none" style={{ color: fg, opacity: 0.08 }}>
+          <Doodle />
+        </div>
+        <div className="max-w-md animate-fade-in relative">
+          <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 grid place-items-center mx-auto mb-4">
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <h1 className="font-display text-3xl font-bold mb-2">{done.message}</h1>
           <p className="text-sm opacity-70 mb-6">Your response was recorded successfully.</p>
-          <Button
-            variant="outline"
+          <button
             onClick={() => {
               setDone(null);
               window.scrollTo(0, 0);
             }}
+            className="px-5 py-2.5 rounded-md font-medium border transition-colors"
+            style={{ borderColor: fg, color: fg }}
           >
             Submit another response
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -133,26 +141,34 @@ export default function PublicFormPage() {
 
   return (
     <div
-      className="min-h-screen"
-      style={{
-        ...themeStyle,
-        background: theme?.tokens?.background ?? undefined,
-        color: theme?.tokens?.foreground ?? undefined,
-      }}
+      className="min-h-screen relative overflow-hidden"
+      style={{ ...themeStyle, background: bg, color: fg }}
     >
-      <div className="max-w-2xl mx-auto px-4 py-12 md:py-20">
-        <header className="mb-10">
-          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{form.title}</h1>
-          {form.description && <p className="opacity-70">{form.description}</p>}
+      {/* Doodle vector watermark for playful feel */}
+      <div className="absolute inset-0 pointer-events-none" style={{ color: fg, opacity: 0.07 }}>
+        <Doodle />
+      </div>
+
+      <div className="relative max-w-2xl mx-auto px-4 py-8 md:py-16">
+        <header className="mb-8 md:mb-10">
+          <h1 className="font-display text-2xl md:text-4xl font-bold mb-2" style={{ color: fg }}>
+            {form.title}
+          </h1>
+          {form.description && (
+            <p className="text-sm md:text-base" style={{ color: fg, opacity: 0.75 }}>
+              {form.description}
+            </p>
+          )}
         </header>
 
-        <form onSubmit={onSubmit} className="space-y-8">
+        <form onSubmit={onSubmit} className="space-y-6 md:space-y-8">
           {fields.map((f) => (
             <FieldRenderer
               key={f.id}
               field={f as RenderableField}
               control={control as never}
               error={formState.errors[f.id] as never}
+              themed
             />
           ))}
 
@@ -160,8 +176,8 @@ export default function PublicFormPage() {
             <button
               type="submit"
               disabled={submit.isPending}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-md font-semibold text-white transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
-              style={{ background: theme?.tokens?.primary ?? '#D7263D' }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-md font-semibold transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100 shadow-sm"
+              style={{ background: primary, color: '#fff' }}
             >
               {submit.isPending ? (
                 <>
@@ -179,7 +195,10 @@ export default function PublicFormPage() {
           </div>
         </form>
 
-        <footer className="mt-16 pt-6 border-t border-current/10 text-xs flex items-center justify-between opacity-60">
+        <footer
+          className="mt-12 md:mt-16 pt-6 border-t text-xs flex items-center justify-between"
+          style={{ borderColor: 'var(--theme-border)', color: fg, opacity: 0.6 }}
+        >
           <Link href="/" className="flex items-center gap-1.5 hover:opacity-100">
             <ShieldCheck className="h-3 w-3" />
             Powered by FormStack

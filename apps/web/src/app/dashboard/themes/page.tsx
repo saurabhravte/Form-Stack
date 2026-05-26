@@ -4,8 +4,8 @@ import { Palette, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/cn';
 import { trpc } from '@/lib/trpc';
+import { getThemeDoodle, isLightColor, readableOn } from '@/lib/theme-utils';
 
 const CATEGORY_LABELS: Record<string, string> = {
   default: 'FormStack',
@@ -35,13 +35,13 @@ export default function ThemesPage() {
     }, {}) ?? {};
 
   return (
-    <div className="p-6 md:p-10 max-w-6xl mx-auto w-full">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
       <header className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <Palette className="h-5 w-5 text-primary" />
-          <h1 className="font-display text-3xl md:text-4xl font-bold">Themes</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold">Themes</h1>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm md:text-base">
           {themes.data?.length ?? 0} starter themes. Pick one when creating a form, or override every token.
         </p>
       </header>
@@ -52,33 +52,52 @@ export default function ThemesPage() {
             <h2 className="font-display text-lg font-semibold">{CATEGORY_LABELS[cat] ?? cat}</h2>
             <Badge variant="secondary">{list.length}</Badge>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {list.map((t) => {
               const tokens = (t.tokens ?? {}) as Record<string, string>;
+              const bg = tokens.background ?? '#0E1116';
+              const fg = readableOn(bg, tokens.foreground);
+              const primary = tokens.primary ?? '#D7263D';
+              const Doodle = getThemeDoodle((t as { category?: string }).category ?? 'default');
+              const light = isLightColor(bg);
+
               return (
                 <Card
                   key={t.id}
                   className="overflow-hidden transition-transform hover:-translate-y-0.5"
                 >
                   <div
-                    className="aspect-[4/3] p-4 flex flex-col justify-between"
-                    style={{ background: tokens.background, color: tokens.foreground }}
+                    className="relative aspect-[4/3] p-4 flex flex-col justify-between overflow-hidden"
+                    style={{ background: bg, color: fg }}
                   >
-                    <div className="flex items-center justify-between text-[10px] opacity-70">
-                      <span className="uppercase tracking-widest">Theme</span>
+                    {/* Doodle vector background */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ opacity: light ? 0.12 : 0.18 }}
+                    >
+                      <Doodle />
+                    </div>
+
+                    <div className="relative flex items-center justify-between text-[10px]" style={{ opacity: 0.85 }}>
+                      <span className="uppercase tracking-widest font-semibold">Theme</span>
                       <span className="font-mono">{t.id}</span>
                     </div>
-                    <div>
-                      <div className="font-display font-semibold text-base leading-tight mb-2">
+
+                    <div className="relative">
+                      {/* Sample text — now uses Tailwind-friendly readable color */}
+                      <div className="font-display font-bold text-lg leading-tight mb-1" style={{ color: fg }}>
                         {(t as { name?: string }).name ?? t.id}
                       </div>
+                      <div className="text-xs mb-3" style={{ color: fg, opacity: 0.8 }}>
+                        Sample form heading
+                      </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-6 rounded-full" style={{ background: tokens.primary }} />
-                        <span className="h-2 w-2 rounded-full" style={{ background: tokens.accent }} />
+                        <span className="h-2 w-6 rounded-full" style={{ background: primary }} />
                         <span
-                          className={cn('h-2 w-2 rounded-full opacity-30')}
-                          style={{ background: tokens.foreground }}
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: tokens.accent ?? primary }}
                         />
+                        <span className="h-2 w-2 rounded-full" style={{ background: fg, opacity: 0.3 }} />
                       </div>
                     </div>
                   </div>
@@ -89,7 +108,7 @@ export default function ThemesPage() {
         </section>
       ))}
 
-      <Card className="p-6 mt-6 bg-gradient-to-br from-primary/5 to-accent-amber/5 border-primary/20">
+      <Card className="p-5 md:p-6 mt-6 bg-gradient-to-br from-primary/5 to-accent-amber/5 border-primary/20">
         <div className="flex items-start gap-3">
           <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
           <div>

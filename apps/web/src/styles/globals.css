@@ -2,27 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Black-and-white as shades + crimson accent. Defaults to light. */
+/* ─────────────────────────────────────────────────────────────
+   Postform-inspired palette: warm cream (light) + deep ink (dark)
+   ───────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --bg: 0 0% 100%;
-    --fg: 0 0% 6%;
-    --surface: 0 0% 98%;
-    --muted: 0 0% 96%;
-    --muted-fg: 0 0% 35%;
-    --border: 0 0% 90%;
+    /* Cream/warm-paper light theme */
+    --bg: 36 50% 97%;
+    /* #FBF8F1 cream */
+    --fg: 220 14% 12%;
+    /* deep ink */
+    --surface: 0 0% 100%;
+    /* pure white cards */
+    --muted: 36 30% 93%;
+    /* soft cream */
+    --muted-fg: 220 9% 40%;
+    --border: 36 20% 85%;
     --ring: 350 71% 50%;
-    --radius: 0.75rem;
+    --radius: 0.875rem;
+
+    /* Soft pastel stat-card backgrounds (Postform-style) */
+    --pastel-mint: 142 60% 88%;
+    --pastel-peach: 24 90% 90%;
+    --pastel-lavender: 252 70% 92%;
+    --pastel-butter: 48 90% 88%;
   }
 
   .dark {
-    --bg: 0 0% 4%;
-    --fg: 0 0% 98%;
-    --surface: 0 0% 8%;
-    --muted: 0 0% 12%;
-    --muted-fg: 0 0% 65%;
-    --border: 0 0% 18%;
+    --bg: 220 15% 7%;
+    /* near-black */
+    --fg: 36 30% 96%;
+    --surface: 220 12% 11%;
+    --muted: 220 10% 16%;
+    --muted-fg: 220 8% 70%;
+    --border: 220 10% 22%;
     --ring: 350 71% 55%;
+
+    /* Slightly muted pastels for dark mode */
+    --pastel-mint: 142 30% 18%;
+    --pastel-peach: 24 40% 20%;
+    --pastel-lavender: 252 30% 22%;
+    --pastel-butter: 48 40% 20%;
   }
 
   * {
@@ -43,7 +63,6 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Headings lean on Finlandica's display weight */
   h1,
   h2,
   h3,
@@ -66,12 +85,125 @@
     background-size: 32px 32px;
   }
 
+  /* Hand-drawn paper texture for doodle backgrounds */
+  .paper-bg {
+    background-color: hsl(var(--bg));
+    background-image:
+      radial-gradient(circle at 20% 30%, hsl(var(--border) / 0.15) 1px, transparent 1px),
+      radial-gradient(circle at 80% 70%, hsl(var(--border) / 0.15) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
     border-radius: 3px;
   }
+
+  /* Pastel utility backgrounds used by dashboard stat cards */
+  .bg-pastel-mint {
+    background-color: hsl(var(--pastel-mint));
+  }
+
+  .bg-pastel-peach {
+    background-color: hsl(var(--pastel-peach));
+  }
+
+  .bg-pastel-lavender {
+    background-color: hsl(var(--pastel-lavender));
+  }
+
+  .bg-pastel-butter {
+    background-color: hsl(var(--pastel-butter));
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Stamp animation: a continuous dashed line that "flows" around
+   the stamp logo, plus a gentle wobble for personality.
+   ───────────────────────────────────────────────────────────── */
+@keyframes stamp-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -200;
+  }
+}
+
+@keyframes stamp-wobble {
+
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes stamp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes paper-plane-loop {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(20px, -10px) rotate(15deg);
+  }
+
+  50% {
+    transform: translate(0, -20px) rotate(0deg);
+  }
+
+  75% {
+    transform: translate(-20px, -10px) rotate(-15deg);
+  }
+
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes float-y {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-stamp-flow {
+  animation: stamp-flow 6s linear infinite;
+}
+
+.animate-stamp-wobble {
+  animation: stamp-wobble 4s ease-in-out infinite;
+}
+
+.animate-stamp-spin {
+  animation: stamp-spin 20s linear infinite;
+}
+
+.animate-plane-loop {
+  animation: paper-plane-loop 8s ease-in-out infinite;
+}
+
+.animate-float-y {
+  animation: float-y 3s ease-in-out infinite;
 }

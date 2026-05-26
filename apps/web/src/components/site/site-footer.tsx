@@ -6,13 +6,11 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-7 w-7 rounded-md bg-primary text-white grid place-items-center font-bold text-sm">
-              F
-            </div>
-            <span className="font-display text-lg font-semibold">FormStack</span>
+            <FooterStamp className="h-8 w-8" />
+            <span className="font-display text-lg font-bold">FormStack</span>
           </div>
           <p className="text-muted-foreground max-w-xs leading-relaxed">
-            The form builder that doesn&apos;t make people sigh. Themed, typed, tracked.
+            Forms that feel like a conversation. Themed, typed, and built for creators.
           </p>
         </div>
         <Column
@@ -39,7 +37,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="container mx-auto px-4 py-5 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} FormStack. Built for the hackathon, designed for the long haul.</span>
+          <span>© {new Date().getFullYear()} FormStack. Made for creators.</span>
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             All systems operational
@@ -47,6 +45,24 @@ export function SiteFooter() {
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterStamp({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" fill="none" className={className}>
+      <rect
+        x="4" y="4" width="40" height="40" rx="2"
+        stroke="currentColor" strokeWidth="2" strokeDasharray="3 2"
+        className="text-primary"
+      />
+      <path
+        d="M14 32 L24 18 L34 28 L38 22"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        className="text-foreground"
+      />
+      <path d="M30 14 L36 12 L34 18 Z" fill="currentColor" className="text-primary" />
+    </svg>
   );
 }
 
