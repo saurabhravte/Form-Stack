@@ -23,6 +23,22 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+const PASTEL = ['mint', 'peach', 'lavender', 'butter'] as const;
+type Pastel = (typeof PASTEL)[number];
+
+const TEMPLATE_ICON: Record<string, React.ReactNode> = {
+  feedback: <MessageSquare className="h-4 w-4" />,
+  registration: <FileText className="h-4 w-4" />,
+  job_app: <Briefcase className="h-4 w-4" />,
+  survey: <BarChart3 className="h-4 w-4" />,
+  default: <FileText className="h-4 w-4" />,
+};
+
+function fmt(n: number | null | undefined) {
+  if (n === null || n === undefined) return '—';
+  return n.toLocaleString();
+}
+
 export default function DashboardPage() {
   const workspaceId = useAuthStore((s) => s.workspaceId);
   const user = useAuthStore((s) => s.user);
@@ -35,8 +51,11 @@ export default function DashboardPage() {
     { workspaceId: workspaceId ?? '' },
     { enabled: !!workspaceId },
   );
+  // FIX: pull real templates instead of a hardcoded list.
+  const templates = trpc.templates.list.useQuery();
 
   const recentForms = (forms.data ?? []).slice(0, 5);
+  const popularTemplates = (templates.data ?? []).slice(0, 4);
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
@@ -57,41 +76,43 @@ export default function DashboardPage() {
         </Button>
       </header>
 
-      {/* Stat cards (pastel like the image) */}
+      {/* Stat cards — all real numbers from workspaceStats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
         <StatCard
           color="mint"
           icon={<FileText className="h-5 w-5" />}
           label="Total Forms"
-          value={String(stats.data?.formCount ?? '—')}
-          delta="↑ 18% from last month"
+          value={fmt(stats.data?.formCount)}
+          sub={`${stats.data?.publishedCount ?? 0} published`}
         />
         <StatCard
           color="peach"
           icon={<Users className="h-5 w-5" />}
           label="Total Responses"
-          value={String(stats.data?.totalResponses ?? '—')}
-          delta="↑ 22% from last month"
+          value={fmt(stats.data?.totalResponses)}
+          sub="Across all forms"
         />
         <StatCard
           color="lavender"
           icon={<Eye className="h-5 w-5" />}
           label="Views"
-          value="12,540"
-          delta="↑ 31% from last month"
+          value={fmt(stats.data?.totalViews)}
+          sub={`${fmt(stats.data?.uniqueViews)} unique`}
         />
         <StatCard
           color="butter"
           icon={<Award className="h-5 w-5" />}
           label="Completion Rate"
-          value="68%"
-          delta="↑ 12% from last month"
+          value={
+            stats.data?.completionRate !== undefined
+              ? `${stats.data.completionRate}%`
+              : '—'
+          }
+          sub="Responses ÷ unique views"
         />
       </div>
 
-      {/* Main grid: Recent Forms + Sidebar (Quick Actions, Templates) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 md:gap-6">
-        {/* Recent Forms */}
         <section>
           <div className="bg-surface border border-border rounded-2xl p-5 md:p-6">
             <div className="flex items-center justify-between mb-5">
@@ -116,50 +137,47 @@ export default function DashboardPage() {
             )}
 
             <div className="space-y-2">
-              {recentForms.map((f, i) => {
-                const colors = ['mint', 'peach', 'lavender', 'butter', 'mint'] as const;
-                return (
-                  <Link
-                    key={f.id}
-                    href={`/dashboard/forms/${f.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/60 transition-colors group"
+              {recentForms.map((f, i) => (
+                <Link
+                  key={f.id}
+                  href={`/dashboard/forms/${f.id}`}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/60 transition-colors group"
+                >
+                  <div
+                    className={`h-11 w-11 rounded-lg grid place-items-center text-foreground/80 bg-pastel-${PASTEL[i % PASTEL.length]}`}
                   >
-                    <div
-                      className={`h-11 w-11 rounded-lg grid place-items-center text-foreground/80 bg-pastel-${colors[i % colors.length]}`}
-                    >
-                      <FileText className="h-5 w-5" />
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{f.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {f.responseCount} responses
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{f.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {f.responseCount} responses
-                      </div>
-                    </div>
-                    <Badge
-                      variant={
-                        f.status === 'published'
-                          ? 'success'
-                          : f.status === 'archived'
-                            ? 'warning'
-                            : 'secondary'
-                      }
-                      className="hidden sm:inline-flex"
-                    >
-                      {f.status}
-                    </Badge>
-                    <button
-                      className="p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </Link>
-                );
-              })}
+                  </div>
+                  <Badge
+                    variant={
+                      f.status === 'published'
+                        ? 'success'
+                        : f.status === 'archived'
+                          ? 'warning'
+                          : 'secondary'
+                    }
+                    className="hidden sm:inline-flex"
+                  >
+                    {f.status}
+                  </Badge>
+                  <button
+                    className="p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </Link>
+              ))}
             </div>
           </div>
 
-          {/* Explore Templates banner */}
+          {/* Explore Templates banner — the big number now reflects real data */}
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
             <div className="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between">
               <div>
@@ -178,15 +196,17 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="bg-pastel-mint border border-border rounded-2xl p-5 flex flex-col justify-center">
-              <div className="text-3xl font-display font-bold text-foreground mb-1">66</div>
+              <div className="text-3xl font-display font-bold text-foreground mb-1">
+                {fmt(stats.data?.totalResponses)}
+              </div>
               <p className="text-sm text-foreground/80 italic">
-                &ldquo;The best forms feel like a conversation.&rdquo;
+                Responses collected — the best forms feel like a conversation.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Sidebar column: Quick Actions + Popular Templates */}
+        {/* Sidebar column */}
         <aside className="space-y-4">
           <div className="bg-surface border border-border rounded-2xl p-5">
             <h3 className="font-display font-bold mb-4">Quick Actions</h3>
@@ -198,6 +218,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Popular Templates: real data from templates.list */}
           <div className="bg-surface border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display font-bold">Popular Templates</h3>
@@ -206,10 +227,21 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-2">
-              <PopularItem icon={<FileText className="h-4 w-4" />} label="Event Registration" color="mint" />
-              <PopularItem icon={<MessageSquare className="h-4 w-4" />} label="Feedback Form" color="peach" />
-              <PopularItem icon={<Briefcase className="h-4 w-4" />} label="Job Application" color="lavender" />
-              <PopularItem icon={<BarChart3 className="h-4 w-4" />} label="Contact Form" color="butter" />
+              {templates.isLoading && (
+                <div className="text-xs text-muted-foreground">Loading…</div>
+              )}
+              {!templates.isLoading && popularTemplates.length === 0 && (
+                <div className="text-xs text-muted-foreground">No templates available.</div>
+              )}
+              {popularTemplates.map((t, i) => (
+                <PopularItem
+                  key={t.id}
+                  href={`/templates#${t.slug}`}
+                  icon={TEMPLATE_ICON[t.category] ?? TEMPLATE_ICON.default}
+                  label={t.title}
+                  color={PASTEL[i % PASTEL.length]}
+                />
+              ))}
             </div>
           </div>
         </aside>
@@ -225,13 +257,13 @@ function StatCard({
   icon,
   label,
   value,
-  delta,
+  sub,
 }: {
-  color: 'mint' | 'peach' | 'lavender' | 'butter';
+  color: Pastel;
   icon: React.ReactNode;
   label: string;
   value: string;
-  delta: string;
+  sub: string;
 }) {
   const bg = {
     mint: 'bg-pastel-mint',
@@ -243,10 +275,10 @@ function StatCard({
     <div className={`${bg} rounded-2xl border border-border p-4 md:p-5`}>
       <div className="text-foreground/70 mb-3">{icon}</div>
       <div className="text-xs text-foreground/70 mb-1">{label}</div>
-      <div className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">{value}</div>
-      <div className="text-[10px] md:text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-        {delta}
+      <div className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">
+        {value}
       </div>
+      <div className="text-[10px] md:text-xs text-foreground/60 font-medium">{sub}</div>
     </div>
   );
 }
@@ -260,7 +292,7 @@ function QuickAction({
   icon: React.ReactNode;
   label: string;
   href: string;
-  color: 'mint' | 'peach' | 'lavender' | 'butter';
+  color: Pastel;
 }) {
   const bg = {
     mint: 'bg-pastel-mint',
@@ -285,10 +317,12 @@ function PopularItem({
   icon,
   label,
   color,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
-  color: 'mint' | 'peach' | 'lavender' | 'butter';
+  color: Pastel;
+  href: string;
 }) {
   const bg = {
     mint: 'bg-pastel-mint',
@@ -298,7 +332,7 @@ function PopularItem({
   }[color];
   return (
     <Link
-      href="/templates"
+      href={href}
       className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors"
     >
       <div className={`${bg} h-9 w-9 rounded-lg grid place-items-center text-foreground/80`}>

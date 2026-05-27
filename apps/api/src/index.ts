@@ -31,7 +31,20 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
-    origin: WEB_URL.split(',').map((s) => s.trim()),
+    origin: (origin, callback) => {
+      // Allow tools like curl / Postman with no Origin header.
+      if (!origin) return callback(null, true);
+
+      const allowed = (process.env.WEB_URL ?? 'http://localhost:3000')
+        .split(',')
+        .map((s) => s.trim());
+
+      if (allowed.includes(origin)) return callback(null, true);
+      // Auto-allow Vercel previews so PR deployments work without a redeploy.
+      if (/\.vercel\.app$/.test(new URL(origin).hostname)) return callback(null, true);
+
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
   }),
 );
