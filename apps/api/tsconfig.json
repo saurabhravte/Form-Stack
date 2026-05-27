@@ -1,9 +1,18 @@
 {
-  "extends": "@formstack/typescript-config/node.json",
+  "extends": "@formstack/typescript-config/base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist",
     "rootDir": "src",
-    "outDir": "dist"
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "types": ["node"]
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", "tsup.config.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

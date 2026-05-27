@@ -10,7 +10,7 @@
     "lint": "eslint src",
     "check-types": "tsc --noEmit"
   },
-  "dependencies": {
+  "dependencies": { 
     "@formstack/db": "workspace:*",
     "@formstack/shared": "workspace:*",
     "@scalar/express-api-reference": "^0.4.118",
