@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { db, forms, formEvents, themes, type FormRow } from '../db';
 
 import {
   ApiError,
@@ -237,23 +238,45 @@ export class FormController extends BaseController {
   /** Stats: total forms in a workspace. */
   async workspaceStats(userId: string, workspaceId: string) {
     await this.assertWorkspaceMembership(userId, workspaceId, 'viewer');
+
     const [total] = await db
       .select({ count: count() })
       .from(forms)
       .where(eq(forms.workspaceId, workspaceId));
+
     const [published] = await db
       .select({ count: count() })
       .from(forms)
       .where(and(eq(forms.workspaceId, workspaceId), eq(forms.status, 'published')));
-    const totalResponses = await db
+
+    const [responseAgg] = await db
       .select({ sum: sql<number>`COALESCE(SUM(${forms.responseCount}), 0)::int` })
       .from(forms)
       .where(eq(forms.workspaceId, workspaceId));
 
+    // Aggregate views across every form in this workspace.
+    const [viewStats] = await db
+      .select({
+        totalViews: count(),
+        uniqueViews: sql<number>`COUNT(DISTINCT ${formEvents.sessionId})::int`,
+      })
+      .from(formEvents)
+      .innerJoin(forms, eq(forms.id, formEvents.formId))
+      .where(and(eq(forms.workspaceId, workspaceId), eq(formEvents.type, 'view')));
+
+    const totalResponses = responseAgg?.sum ?? 0;
+    const totalViews = viewStats?.totalViews ?? 0;
+    const uniqueViews = viewStats?.uniqueViews ?? 0;
+    const completionRate =
+      uniqueViews > 0 ? Math.round((totalResponses / uniqueViews) * 1000) / 10 : 0;
+
     return {
       formCount: total?.count ?? 0,
       publishedCount: published?.count ?? 0,
-      totalResponses: totalResponses[0]?.sum ?? 0,
+      totalResponses,
+      totalViews,
+      uniqueViews,
+      completionRate, // percent, 1 decimal
     };
   }
 
