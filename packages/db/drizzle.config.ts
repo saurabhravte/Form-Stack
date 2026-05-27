@@ -1,13 +1,16 @@
 import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
+
 export default defineConfig({
   schema: './src/schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgresql://formstack:formstack@localhost:5432/formstack',
+    url: process.env.DATABASE_URL ?? (() => { throw new Error('DATABASE_URL is required') })(),
   },
   verbose: true,
   strict: true,
 });
+
+

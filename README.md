@@ -1,35 +1,110 @@
+<div align="center">
+
 # Form-Stack
 
-> A TypeForm-style form builder built with a modern, type-safe stack. Created as a hackathon project, powered by **tRPC**, **Next.js**, and **Turborepo**.
+**A modern, open-source form builder inspired by Typeform.**
+Built with end-to-end type safety using Next.js, tRPC, and Drizzle ORM.
 
-Form-Stack lets you create, share, and collect responses from beautiful, one-question-at-a-time forms — similar to TypeForm — with end-to-end type safety from the database all the way to the React components.
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![tRPC](https://img.shields.io/badge/tRPC-11-2596be?logo=trpc)](https://trpc.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+[🌐 Live Demo](https://form-stack-web.vercel.app) · [📖 Documentation](#-getting-started) · [🐛 Report Bug](https://github.com/saurabhravte/Form-Stack/issues)
+
+</div>
+
+---
+
+## About
+
+Form-Stack is a self-hostable, full-stack form builder that brings the elegant, one-question-at-a-time experience of Typeform to an open-source project you control. Build beautiful forms, share them with a link, and collect responses without paying per submission or worrying about vendor lock-in.
+
+It is designed as a **production-grade monorepo template** for full-stack TypeScript applications, demonstrating clean separation between a Next.js frontend and an Express + tRPC backend, with shared types flowing seamlessly from the database to the UI.
 
 ---
 
 ##  Features
 
-- 🧱 **Drag-friendly form builder** — design multi-step forms with different question types
-- 🔁 **End-to-end type safety** — tRPC + TypeScript means no API contracts to maintain
-- ⚡ **Real-time responses** — Redis-backed cache for fast reads
-- 🗄️ **PostgreSQL storage** — durable storage for forms and submissions
-- 🧩 **Monorepo architecture** — shared UI, config, and DB packages via Turborepo
-- 🎨 **Reusable UI library** — `@repo/ui` shared across apps
-- 🐳 **Dockerized dev DB** — Postgres + Redis spin up with one command
+-  **Beautiful form builder** — drag-friendly UI for designing multi-step forms
+-  **End-to-end type safety** — tRPC + TypeScript ensure your API contract is always in sync
+-  **Redis-backed rate limiting** — protect your endpoints from abuse
+-  **JWT authentication** — secure, cookie-based sessions out of the box
+-  **Built-in analytics** — track views, completion rates, and per-field drop-off
+-  **Theme presets** — choose from curated visual styles or build your own
+-  **Form templates** — kickstart common use cases (surveys, sign-ups, feedback)
+-  **CSV export** — download responses for offline analysis
+-  **Monorepo architecture** — shared schema, types, and utilities across apps
+
+---
+
+##  Screenshots
+
+<div align="center">
+
+### Dashboard
+*Manage all your forms in one place*
+
+![Dashboard](./docs/dashboard.png)
+
+---
+
+### Form Builder
+*Design questions, configure validation, customize the look*
+
+![Form Builder](./docs/form-create.png)
+
+---
+
+
+### Homepage
+*formstack landing page*
+
+![Analytics](./docs/homepage.png)
+
+</div>
+
 
 ---
 
 ##  Tech Stack
 
-| Layer            | Tech                                              |
-| ---------------- | ------------------------------------------------- |
-| Framework        | [Next.js](https://nextjs.org/) (App Router)       |
-| API              | [tRPC](https://trpc.io/) — type-safe RPC          |
-| Language         | [TypeScript](https://www.typescriptlang.org/)     |
-| Database         | PostgreSQL 16                                     |
-| Cache            | Redis 7                                           |
-| Monorepo         | [Turborepo](https://turborepo.com/) + pnpm        |
-| Linting / Format | ESLint + Prettier                                 |
-| Runtime          | Node.js ≥ 20                                      |
+| Layer            | Technology                                          |
+| ---------------- | --------------------------------------------------- |
+| **Frontend**     | [Next.js 14](https://nextjs.org/) (App Router)      |
+| **Backend**      | [Express](https://expressjs.com/) + [tRPC 11](https://trpc.io/) |
+| **Language**     | [TypeScript 5](https://www.typescriptlang.org/)     |
+| **Database**     | PostgreSQL 16 via [Drizzle ORM](https://orm.drizzle.team/) |
+| **Cache / Rate Limiting** | Redis 7                                    |
+| **Auth**         | JWT + bcrypt + httpOnly cookies                     |
+| **Email**        | [Resend](https://resend.com/)                       |
+| **Monorepo**     | [Turborepo](https://turborepo.com/) + pnpm workspaces |
+| **Deployment**   | Vercel (frontend) · Render (API) · Neon (DB) · Upstash (Redis) |
+
+---
+
+##  Architecture
+
+Form-Stack uses a **decoupled frontend-backend** architecture, allowing you to scale and deploy each independently.
+
+```
+┌─────────────────┐        tRPC over HTTPS        ┌─────────────────┐
+│                 │  ─────────────────────────►   │                 │
+│   Next.js Web   │                                │   Express API   │
+│    (Vercel)     │  ◄─────────────────────────   │    (Render)     │
+│                 │      JSON + superjson          │                 │
+└─────────────────┘                                └────────┬────────┘
+                                                            │
+                                              ┌─────────────┴─────────────┐
+                                              │                           │
+                                       ┌──────▼──────┐            ┌───────▼──────┐
+                                       │  PostgreSQL │            │    Redis     │
+                                       │    (Neon)   │            │  (Upstash)   │
+                                       └─────────────┘            └──────────────┘
+```
+
+The frontend never touches the database directly — all data flows through type-safe tRPC procedures.
 
 ---
 
@@ -38,17 +113,16 @@ Form-Stack lets you create, share, and collect responses from beautiful, one-que
 ```
 Form-Stack/
 ├── apps/
-│   ├── web/                 # Main Next.js app (form builder + public form pages)
-│   └── docs/                # Documentation Next.js app
+│   ├── web/                 # Next.js frontend (form builder + public form pages)
+│   └── api/                 # Express + tRPC backend
 ├── packages/
-│   ├── db/                  # @formstack/db — schema, migrations, seed
-│   ├── ui/                  # @repo/ui — shared React components
-│   ├── eslint-config/       # @repo/eslint-config — shared ESLint config
-│   └── typescript-config/   # @repo/typescript-config — shared tsconfigs
-├── docker-compose.yml       # Postgres + Redis for local dev
-├── turbo.json               # Turborepo pipeline config
-├── pnpm-workspace.yaml      # pnpm workspaces config
-└── setup.sh                 # One-shot setup helper
+│   ├── db/                  # @formstack/db — Drizzle schema, migrations, seed
+│   ├── shared/              # @formstack/shared — shared types, themes, errors
+│   ├── eslint-config/       # Shared ESLint rules
+│   └── typescript-config/   # Shared tsconfig presets
+├── docker-compose.yml       # Local Postgres + Redis
+├── turbo.json               # Turborepo pipeline
+└── pnpm-workspace.yaml      # Workspace configuration
 ```
 
 ---
@@ -58,135 +132,145 @@ Form-Stack/
 ### Prerequisites
 
 - **Node.js** ≥ 20 ([install](https://nodejs.org/))
-- **pnpm** 9.x — `npm install -g pnpm@9`
+- **pnpm** 9+ — `npm install -g pnpm@9`
 - **Docker** + **Docker Compose** ([install](https://docs.docker.com/get-docker/))
-- **Git**
 
-### 1. Clone the repository
+### 1. Clone & install
 
 ```bash
 git clone https://github.com/saurabhravte/Form-Stack.git
 cd Form-Stack
-```
-
-### 2. Install dependencies
-
-```bash
 pnpm install
 ```
 
-### 3. Start the database & cache
-
-This boots Postgres 16 and Redis 7 in containers:
+### 2. Start Postgres & Redis locally
 
 ```bash
 docker compose up -d
 ```
 
-Defaults:
+This starts:
+- **PostgreSQL** on `localhost:5432`
+- **Redis** on `localhost:6379`
 
-- **Postgres** → `postgres://formstack:formstack@localhost:5432/formstack`
-- **Redis** → `redis://localhost:6379`
+### 3. Configure environment variables
 
-### 4. Set up environment variables
+Create the following files:
 
-Create a `.env` file in `apps/web` (and in `packages/db` if needed) — see [Environment Variables](#-environment-variables) below.
+**`packages/db/.env`**
 
-### 5. Run database migrations + seed
-
-```bash
-pnpm db:push        # push schema to the DB
-pnpm db:seed        # seed sample data (optional)
+```env
+DATABASE_URL="postgresql://formstack:formstack@localhost:5432/formstack"
 ```
 
-You can browse the database with:
+**`apps/api/.env`**
 
-```bash
-pnpm db:studio
+```env
+DATABASE_URL="postgresql://formstack:formstack@localhost:5432/formstack"
+REDIS_URL="redis://localhost:6379"
+JWT_SECRET="generate-with-openssl-rand-base64-32"
+WEB_URL="http://localhost:3000"
+PORT=4000
 ```
 
-### 6. Start the dev servers
+**`apps/web/.env.local`**
+
+```env
+NEXT_PUBLIC_API_URL="http://localhost:4000"
+```
+> 💡 Generate a secure JWT secret with `openssl rand -base64 32`
+
+### 4. Set up the database
+
+```bash
+pnpm --filter @formstack/shared build   # build shared package first
+pnpm db:push                            # create tables in Postgres
+pnpm db:seed                            # seed themes & templates
+```
+
+### 5. Run the dev servers
 
 ```bash
 pnpm dev
 ```
 
-This starts every app in the monorepo in parallel. By default:
+This starts both apps in parallel:
 
-- `web` → http://localhost:3000
-- `docs` → http://localhost:3001
-
-To run just one app:
-
-```bash
-pnpm dev --filter=web
-```
-
----
-
-##  Environment Variables
-
-Create `apps/web/.env.local` (and `packages/db/.env` if your DB package reads from there):
-
-```env
-# Database
-DATABASE_URL="postgres://formstack:formstack@localhost:5432/formstack"
-
-# Redis
-REDIS_URL="redis://localhost:6379"
-
-# NextAuth (if using auth)
-NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
-NEXTAUTH_URL="http://localhost:3000"
-
-# Public app URL (used for share links)
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
-
-> Generate a secret: `openssl rand -base64 32`
+- **Web** → http://localhost:3000
+- **API** → http://localhost:4000
+- **API Docs** → http://localhost:4000/docs
 
 ---
 
 ##  Available Scripts
 
-All scripts run from the repo root.
+| Command            | Description                                |
+| ------------------ | ------------------------------------------ |
+| `pnpm dev`         | Start all apps in development mode         |
+| `pnpm build`       | Build all apps and packages                |
+| `pnpm lint`        | Lint the entire monorepo                   |
+| `pnpm format`      | Format code with Prettier                  |
+| `pnpm check-types` | Type-check all packages                    |
+| `pnpm db:push`     | Push schema changes to the database        |
+| `pnpm db:migrate`  | Run pending migrations                     |
+| `pnpm db:seed`     | Seed the database with starter data        |
+| `pnpm db:studio`   | Open Drizzle Studio (visual DB browser)    |
 
-| Command                | What it does                                  |
-| ---------------------- | --------------------------------------------- |
-| `pnpm dev`             | Start every app in dev mode                   |
-| `pnpm build`           | Build every app and package                   |
-| `pnpm lint`            | Lint the whole monorepo                       |
-| `pnpm format`          | Prettier-format all files                     |
-| `pnpm check-types`     | Type-check the whole monorepo                 |
-| `pnpm db:push`         | Push schema changes to the DB                 |
-| `pnpm db:migrate`      | Run migrations                                |
-| `pnpm db:seed`         | Seed sample data                              |
-| `pnpm db:studio`       | Open the DB studio UI                         |
-
-Filter to one app or package:
+Filter to a specific package:
 
 ```bash
-pnpm dev --filter=web
-pnpm build --filter=docs
+pnpm dev --filter @formstack/web
+pnpm build --filter @formstack/api
 ```
+
+---
+
+##  Deploying to Production (Free)
+
+Form-Stack can be deployed entirely on free tiers:
+
+| Service             | Hosts                  | Free Tier             |
+| ------------------- | ---------------------- | --------------------- |
+| **Vercel**          | `apps/web` (Next.js)   | Unlimited deployments |
+| **Render**          | `apps/api` (Express)   | 750 hours/month       |
+| **Neon**            | PostgreSQL database    | 0.5 GB storage        |
+| **Upstash**         | Redis                  | 10K commands/day      |
+
+A detailed deployment walkthrough is available in [`DEPLOYMENT.md`](./DEPLOYMENT.md) (or open an issue if you get stuck — happy to help!).
 
 ---
 
 ##  How It Works
 
-1. **`apps/web`** hosts the form builder UI and the public form-taking pages.
-2. **tRPC routers** (typically under `apps/web/src/server`) expose type-safe procedures the React app calls directly — no REST or GraphQL layer to maintain.
-3. **`@formstack/db`** owns the schema, migrations, and seed scripts. The same types are imported by tRPC procedures, so a schema change flows up to the UI automatically.
-4. **Redis** is used as a cache/queue layer for hot reads (e.g. counts, presence) and can power background jobs.
-5. **Turborepo** orchestrates builds and caches across the monorepo so re-runs are nearly instant.
-
+1. **`apps/web`** — A Next.js App Router site hosting the dashboard, form builder, and public form-taking pages.
+2. **`apps/api`** — An Express server that mounts tRPC at `/trpc/*` and exposes auto-generated OpenAPI docs at `/docs`.
+3. **`packages/db`** — Owns the Drizzle schema, migrations, and seed scripts. Both the API and CLI scripts import from here.
+4. **`packages/shared`** — Shared TypeScript types (themes, error classes, validation schemas) used across the monorepo.
+5. **Redis** — Powers `express-rate-limit` to protect auth endpoints and form submission from abuse.
+6. **Turborepo** — Caches builds across packages so re-runs are nearly instant in CI.
 
 ---
 
-## 👤 Author
+
+##  License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Author
 
 **Saurabh Ravte**
 
-- GitHub: [@saurabhravte](https://github.com/saurabhravte)
+- 🌐 GitHub: [@saurabhravte](https://github.com/saurabhravte)
+- 💼 Built as a hackathon project — turned into a real, deployable app
 
-If Form-Stack helped you, drop a ⭐ on the repo — it really helps!
+---
+
+<div align="center">
+
+**If Form-Stack helped you or inspired your own project, please consider giving it a ⭐ on GitHub!**
+
+Made with ❤️ and a lot of debugging.
+
+</div>
