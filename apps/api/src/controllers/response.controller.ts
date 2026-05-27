@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import { ApiError, type SubmitResponseInput } from '@formstack/shared';
+import { AnswerValueSchemas, ApiError, type SubmitResponseInput } from '@formstack/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 
-import { db, forms, responses, type FormRow } from '../db';
+import { users, db, forms, responses, type FormRow } from '../db';
 import { emailService } from '../services/email.service';
 
 import { BaseController } from './base.controller';
@@ -113,48 +113,38 @@ export class ResponseController extends BaseController {
   }
 
   private validateAnswerForKind(field: FormField, value: unknown) {
-    if (value === null || value === undefined) return;
-    switch (field.kind) {
-      case 'email':
-        if (typeof value !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
-          throw ApiError.unprocessable('Invalid email', { fieldId: field.id });
-        }
-        break;
-      case 'number':
-        if (typeof value !== 'number' || Number.isNaN(value)) {
-          throw ApiError.unprocessable('Expected a number', { fieldId: field.id });
-        }
-        break;
-      case 'yes_no':
-      case 'checkbox':
-        if (typeof value !== 'boolean') throw ApiError.unprocessable('Expected boolean', { fieldId: field.id });
-        break;
-      case 'multi_select':
-        if (!Array.isArray(value)) throw ApiError.unprocessable('Expected array', { fieldId: field.id });
-        break;
-      case 'rating':
-      case 'opinion_scale':
-        if (typeof value !== 'number') throw ApiError.unprocessable('Expected number', { fieldId: field.id });
-        break;
-      default:
-        // Other kinds accept any JSON-serializable value.
-        break;
-    }
+  if (value === null || value === undefined) return;
+  const schema = AnswerValueSchemas[field.kind];
+  if (!schema) return; // permissive kinds
+  const result = schema.safeParse(value);
+  if (!result.success) {
+    throw ApiError.unprocessable(
+      `Invalid value for field "${field.id}"`,
+      { fieldId: field.id, issues: result.error.flatten() },
+    );
   }
+}
 
   private async notifyCreator(form: FormRow, responseId: string) {
-    try {
-      if (!(form.settings as { notifyOnResponse?: boolean })?.notifyOnResponse) return;
-      await emailService.send({
-        to: 'creator@example.com', // resolved by emailService in a full impl
-        subject: `New response to "${form.title}"`,
-        text: `A new response (${responseId}) was just submitted.`,
-      });
-    } catch (err) {
-      // Notifications never block the user-visible response.
-      console.warn('notifyCreator failed', err);
-    }
+  try {
+    if (!(form.settings as { notifyOnResponse?: boolean })?.notifyOnResponse) return;
+    const [creator] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, form.createdByUserId))
+      .limit(1);
+    if (!creator) return;
+    await emailService.send({
+      to: creator.email,
+      subject: `New response to "${form.title}"`,
+      text: `A new response (${responseId}) was just submitted.`,
+    });
+   } catch (err) {
+    console.warn('notifyCreator failed', err);
+   }
   }
+
+  
 }
 
 export const responseController = new ResponseController();

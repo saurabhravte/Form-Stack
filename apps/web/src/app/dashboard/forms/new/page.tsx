@@ -25,12 +25,11 @@ export default function NewFormPage() {
   const templates = trpc.templates.list.useQuery();
 
   const create = trpc.forms.create.useMutation({
-    onSuccess: () => {
-      toast.success('Form created');
-      // BUG FIX #7: redirect to dashboard instead of form builder
-      router.push('/dashboard');
-    },
-    onError: (e) => toast.error(e.message),
+    onSuccess: (form) => {
+    toast.success('Form created');
+    router.push(`/dashboard/forms/${form.id}`);   
+  },
+  onError: (e) => toast.error(e.message),
   });
 
   const onCreate = () => {

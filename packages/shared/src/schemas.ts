@@ -322,4 +322,22 @@ export const PaginationSchema = z.object({
   limit: z.number().int().min(1).max(100).default(20),
 });
 
+export const AnswerValueSchemas: Record<string, z.ZodTypeAny> = {
+  short_text: z.string().max(200),
+  long_text: z.string().max(5000),
+  email: z.string().email(),
+  phone: z.string().min(3),
+  website: z.string().url(),
+  number: z.number(),
+  yes_no: z.boolean(),
+  checkbox: z.boolean(),
+  legal: z.boolean(),
+  single_select: z.string(),
+  multi_select: z.array(z.string()),
+  dropdown: z.string(),
+  opinion_scale: z.number().int().min(0).max(10),
+  rating: z.number().int().min(1).max(10),
+  date: z.string(),
+};
+
 export type Pagination = z.infer<typeof PaginationSchema>;
