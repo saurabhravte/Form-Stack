@@ -1,172 +1,192 @@
-# FormStack
+# Form-Stack
 
-> A Typeform-style form builder for the hackathon era. Themed, typed, tracked.
+> A TypeForm-style form builder built with a modern, type-safe stack. Created as a hackathon project, powered by **tRPC**, **Next.js**, and **Turborepo**.
 
-FormStack is a full-stack form builder SaaS scaffold. Build forms with 25+ field types, pick from 7 themed presets, share public/unlisted links, and track real-time analytics — all running on a type-safe Turborepo monorepo wired end to end with tRPC + Zod + Drizzle + Scalar.
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Next.js 14 (App Router)  →  tRPC v11  →  Drizzle / Postgres   │
-│            │                     │                  │          │
-│       Zod schemas ────── @formstack/shared ─────── Zod schemas │
-└────────────────────────────────────────────────────────────────┘
-```
+Form-Stack lets you create, share, and collect responses from beautiful, one-question-at-a-time forms — similar to TypeForm — with end-to-end type safety from the database all the way to the React components.
 
 ---
 
-## Demo credentials
+##  Features
 
-Run the seed (`pnpm db:seed`), then sign in with:
-
-| Field    | Value                  |
-|----------|------------------------|
-| Email    | `demo@formstack.dev`   |
-| Password | `Demo1234!`            |
-
-The demo workspace ships with 3 themed, published sample forms with real seeded responses:
-
-- 🎬 **Best Movie of the Decade** — `midnight-cinema` theme, public
-- 🌸 **Anime Fan Census 2026** — `shonen-sunrise` theme, public
-- 🎮 **GameDevHQ Feedback** — `arcade-neon` theme, unlisted
-
-…plus 6 templates and 7 starter themes.
+- 🧱 **Drag-friendly form builder** — design multi-step forms with different question types
+- 🔁 **End-to-end type safety** — tRPC + TypeScript means no API contracts to maintain
+- ⚡ **Real-time responses** — Redis-backed cache for fast reads
+- 🗄️ **PostgreSQL storage** — durable storage for forms and submissions
+- 🧩 **Monorepo architecture** — shared UI, config, and DB packages via Turborepo
+- 🎨 **Reusable UI library** — `@repo/ui` shared across apps
+- 🐳 **Dockerized dev DB** — Postgres + Redis spin up with one command
 
 ---
 
-## Tech stack
+##  Tech Stack
 
-| Layer        | Choice                                                          |
-|--------------|-----------------------------------------------------------------|
-| Monorepo     | Turborepo + pnpm workspaces                                     |
-| Backend      | Express + tRPC v11 (`/trpc/*`) + Scalar reference (`/docs`)     |
-| Database     | Postgres 16 + Drizzle ORM (typed, transactional)                |
-| Auth         | bcrypt + JWT, HTTP-only cookies, server-side revocation         |
-| Validation   | Zod everywhere (shared schemas — one source of truth)           |
-| Frontend     | Next.js 14 (App Router), React 18, Tailwind, shadcn primitives  |
-| State        | Zustand (auth, builder) + TanStack Query (server cache)         |
-| Forms        | React Hook Form + `@hookform/resolvers/zod`                     |
-| Charts       | Recharts                                                        |
-| Email        | Resend (graceful no-op fallback when key missing)               |
-| Rate limit   | `express-rate-limit` on submit / login / register               |
+| Layer            | Tech                                              |
+| ---------------- | ------------------------------------------------- |
+| Framework        | [Next.js](https://nextjs.org/) (App Router)       |
+| API              | [tRPC](https://trpc.io/) — type-safe RPC          |
+| Language         | [TypeScript](https://www.typescriptlang.org/)     |
+| Database         | PostgreSQL 16                                     |
+| Cache            | Redis 7                                           |
+| Monorepo         | [Turborepo](https://turborepo.com/) + pnpm        |
+| Linting / Format | ESLint + Prettier                                 |
+| Runtime          | Node.js ≥ 20                                      |
 
 ---
 
-## Monorepo layout
+##  Project Structure
 
 ```
-formstack/
+Form-Stack/
 ├── apps/
-│   ├── api/              # Express + tRPC server (port 4000)
-│   └── web/              # Next.js client (port 3000)
-└── packages/
-    ├── shared/           # Zod schemas, ApiError/ApiResponse, themes, field meta
-    ├── db/               # Drizzle schema + seed
-    ├── eslint-config/    # Shared lint rules
-    └── typescript-config/# Shared tsconfig presets
+│   ├── web/                 # Main Next.js app (form builder + public form pages)
+│   └── docs/                # Documentation Next.js app
+├── packages/
+│   ├── db/                  # @formstack/db — schema, migrations, seed
+│   ├── ui/                  # @repo/ui — shared React components
+│   ├── eslint-config/       # @repo/eslint-config — shared ESLint config
+│   └── typescript-config/   # @repo/typescript-config — shared tsconfigs
+├── docker-compose.yml       # Postgres + Redis for local dev
+├── turbo.json               # Turborepo pipeline config
+├── pnpm-workspace.yaml      # pnpm workspaces config
+└── setup.sh                 # One-shot setup helper
 ```
 
 ---
 
-## Architecture decisions
+##  Getting Started
 
-- **No business logic in tRPC procedures.** Procedures are one-line delegations to controllers. Controllers extend `BaseController` (membership checks, `assertFound`, error normalization) and hold all DB access and business rules. This kept routers under 40 lines and made unit tests possible without spinning up tRPC.
-- **`ApiError` + `ApiResponse` in `@formstack/shared`.** Thrown everywhere. The Express `errorHandler` and the tRPC `errorFormatter` both unwrap it into the same JSON envelope, so the frontend can rely on `error.data.code` and `error.data.details` regardless of transport.
-- **Shared Zod schemas drive validation on both sides.** `RegisterStep1Schema`, `FieldConfigSchema` (discriminated union over 29 `kind`s), `SubmitResponseSchema` — all imported from `@formstack/shared`. Server-side, every procedure has `.input(Schema)`; client-side, react-hook-form gets the same schema via `zodResolver()`.
-- **Session strategy.** JWT carries `{ sub: userId, sid: sessionId }`. The `sessions` table stores `sha256(token)` so the server can revoke (logout, password change, suspicious activity) without rolling JWT secrets. Cookie is `httpOnly`, `sameSite=lax` (dev) / `none` (prod with secure), 7-day max-age.
-- **Form visibility.**
-  - `draft` → `getPublicBySlug` returns 404. Form is invisible.
-  - `private` → 404 publicly. Creator-only access.
-  - `unlisted` → fetchable by slug, not indexed in `/explore`.
-  - `public` → fetchable + listed.
-- **Rate limits** are targeted at sensitive routes only (`auth.login`, `auth.register`, `responses.submit`) so authoring throughput is uncapped.
+### Prerequisites
 
----
+- **Node.js** ≥ 20 ([install](https://nodejs.org/))
+- **pnpm** 9.x — `npm install -g pnpm@9`
+- **Docker** + **Docker Compose** ([install](https://docs.docker.com/get-docker/))
+- **Git**
 
-## Setup
-
-You need: **Node 20+**, **pnpm 9+**, and **Docker Desktop**.
+### 1. Clone the repository
 
 ```bash
-# 1. Install
-git clone <repo> formstack && cd formstack
+git clone https://github.com/saurabhravte/Form-Stack.git
+cd Form-Stack
+```
+
+### 2. Install dependencies
+
+```bash
 pnpm install
+```
 
-# 2. Spin up Postgres + Redis
-docker-compose up -d
+### 3. Start the database & cache
 
-# 3. Environment
-cp .env.example .env
+This boots Postgres 16 and Redis 7 in containers:
 
-# 4. Push schema and seed demo data
-pnpm db:push
-pnpm db:seed
+```bash
+docker compose up -d
+```
 
-# 5. Start everything (api on :4000, web on :3000) — one command, Turbo runs both
+Defaults:
+
+- **Postgres** → `postgres://formstack:formstack@localhost:5432/formstack`
+- **Redis** → `redis://localhost:6379`
+
+### 4. Set up environment variables
+
+Create a `.env` file in `apps/web` (and in `packages/db` if needed) — see [Environment Variables](#-environment-variables) below.
+
+### 5. Run database migrations + seed
+
+```bash
+pnpm db:push        # push schema to the DB
+pnpm db:seed        # seed sample data (optional)
+```
+
+You can browse the database with:
+
+```bash
+pnpm db:studio
+```
+
+### 6. Start the dev servers
+
+```bash
 pnpm dev
 ```
 
-Open:
+This starts every app in the monorepo in parallel. By default:
 
-- **Web:**         http://localhost:3000
-- **API health:**  http://localhost:4000/health
-- **API docs:**    http://localhost:4000/docs   ← Scalar reference (kept off the public navbar; this is a dev-only surface)
+- `web` → http://localhost:3000
+- `docs` → http://localhost:3001
 
----
-
-## Useful commands
+To run just one app:
 
 ```bash
-pnpm dev                # api + web concurrently
-pnpm build              # turbo build, both apps
-pnpm lint               # eslint, both apps + packages
-pnpm check-types        # tsc --noEmit across the monorepo
-
-pnpm --filter @formstack/db db:push      # apply schema to Postgres
-pnpm --filter @formstack/db db:seed      # reset + seed demo data
-pnpm --filter @formstack/db db:studio    # open Drizzle Studio
+pnpm dev --filter=web
 ```
 
 ---
 
-## Feature inventory
+##  Environment Variables
 
-### ✅ Built and working
+Create `apps/web/.env.local` (and `packages/db/.env` if your DB package reads from there):
 
-- **Auth.** Sign up (3-step), sign in (2-step), sign out, cookie session, server-side session revocation, login + register rate limiting.
-- **Workspaces.** Created with the first user. Role-based membership table (`owner`/`admin`/`editor`/`viewer`) with rank-checked guards in `BaseController.assertWorkspaceMembership`.
-- **Forms.** CRUD, slug auto-generation with collision retry, publish (requires ≥1 field), unpublish, archive, clone (duplicates as draft).
-- **Form builder.** Three-pane layout — field palette grouped by category (Contact / Choice / Rating / Data / Other), canvas with inline reorder + delete, right-pane config (label, help text, required, options, scale max, placeholder) and theme picker.
-- **25+ field types in the schema, 18+ rendered** — short/long text, email, phone, address, website, single/multi/dropdown, picture choice, yes/no, legal, checkbox, opinion scale, rating, ranking, number, date, signature, file upload, welcome screen, statement, redirect, plus permissive shapes for payment, scheduler, video, audio, FAQ, question group, matrix.
-- **19 themed presets** seeded: 7 originals (Crimson, Midnight Cinema, Shōnen Sunrise, Arcade Neon, YC Startup, Terminal OS, DevCon) plus 12 new (Mumbai Monsoon, Jaipur Pink City, Kerala Backwaters, Diwali, Holi, Tokyo Night, Kyoto Sakura, Windows ‘95, Windows XP, Deep Forest, Autumn Leaves, Winter Frost). Tokens drive `--theme-*` CSS vars on the public renderer.
-- **Public form renderer** at `/f/[slug]`. Applies the form's theme tokens, enforces visibility rules, records `view` + `submit` events, posts to `responses.submit` with `durationMs` in metadata.
-- **Responses.** Public submit (rate-limited 10/min/IP), creator-only `listForForm` with cursor pagination, per-response answer drill-down UI, CSV export via `/trpc/analytics.exportCsv`.
-- **Analytics.** Total views, unique views (by sessionId), total responses, completion rate, average duration. Daily time series + per-field completion bar chart (Recharts).
-- **API reference.** Scalar UI at `/docs` reading from a curated `/openapi.json`.
-- **Marketing pages.** Landing (hero, feature grid, theme gallery, CTA), Pricing (4 tiers from `PLAN_PRICING` with monthly/yearly toggle), Explore (public form gallery), Templates, API docs, 404.
-- **Themes.** Black-and-white shade palette with crimson `#D7263D` primary and small accent touches (amber, teal, violet, lime). Light/dark toggle via the theme provider; Poppins everywhere.
+```env
+# Database
+DATABASE_URL="postgres://formstack:formstack@localhost:5432/formstack"
 
-### 🚧 Scaffolded but not finished
+# Redis
+REDIS_URL="redis://localhost:6379"
 
-- **Conditional logic.** The Zod schema accepts a `conditional` clause on each field but the renderer + builder UI don't evaluate it yet.
-- **Multi-page forms.** `FormSettingsSchema.multiPage` is wired in storage; the public renderer still emits all fields on one page.
-- **Drag-and-drop reorder.** Builder uses up/down chevrons; swap for `dnd-kit` in a follow-up.
-- **Integrations.** Slack/Notion/Sheets/Calendly are listed in the marketing copy but the integration plumbing is not implemented.
+# NextAuth (if using auth)
+NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
+NEXTAUTH_URL="http://localhost:3000"
 
-### 🔮 Not started
+# Public app URL (used for share links)
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
 
-- AI form generator, branching logic UI, webhook config UI, SSO, embedded forms (`<script>` widget), QR code per form, paid plan billing.
+> Generate a secret: `openssl rand -base64 32`
 
 ---
 
-## Where to find things
+##  Available Scripts
 
-- Want to change validation rules? → `packages/shared/src/schemas.ts`
-- New field type? → add to `FIELD_KINDS` (`packages/shared/src/constants.ts`), `FIELD_KIND_META` (`packages/shared/src/fields.ts`), `FieldConfigSchema` (`packages/shared/src/schemas.ts`), then render in `apps/web/src/components/forms/field-renderer.tsx`.
-- New theme? → push a row into the `themes` table (see `packages/db/src/seed.ts`).
-- New error shape? → `ApiError.factories` in `packages/shared/src/errors.ts`.
+All scripts run from the repo root.
+
+| Command                | What it does                                  |
+| ---------------------- | --------------------------------------------- |
+| `pnpm dev`             | Start every app in dev mode                   |
+| `pnpm build`           | Build every app and package                   |
+| `pnpm lint`            | Lint the whole monorepo                       |
+| `pnpm format`          | Prettier-format all files                     |
+| `pnpm check-types`     | Type-check the whole monorepo                 |
+| `pnpm db:push`         | Push schema changes to the DB                 |
+| `pnpm db:migrate`      | Run migrations                                |
+| `pnpm db:seed`         | Seed sample data                              |
+| `pnpm db:studio`       | Open the DB studio UI                         |
+
+Filter to one app or package:
+
+```bash
+pnpm dev --filter=web
+pnpm build --filter=docs
+```
 
 ---
 
-## License
+##  How It Works
 
-MIT.
+1. **`apps/web`** hosts the form builder UI and the public form-taking pages.
+2. **tRPC routers** (typically under `apps/web/src/server`) expose type-safe procedures the React app calls directly — no REST or GraphQL layer to maintain.
+3. **`@formstack/db`** owns the schema, migrations, and seed scripts. The same types are imported by tRPC procedures, so a schema change flows up to the UI automatically.
+4. **Redis** is used as a cache/queue layer for hot reads (e.g. counts, presence) and can power background jobs.
+5. **Turborepo** orchestrates builds and caches across the monorepo so re-runs are nearly instant.
+
+
+---
+
+## 👤 Author
+
+**Saurabh Ravte**
+
+- GitHub: [@saurabhravte](https://github.com/saurabhravte)
+
+If Form-Stack helped you, drop a ⭐ on the repo — it really helps!
