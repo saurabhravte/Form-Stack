@@ -26,8 +26,7 @@ import { cn } from '@/lib/cn';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
-// FIX: removed broken Integrations/Team links (no pages exist),
-// and dropped the bogus ?filter=responses query on Responses.
+
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/forms', label: 'My Forms', icon: FileText },
@@ -45,10 +44,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const me = trpc.auth.me.useQuery(undefined, { staleTime: 30_000, retry: 1 });
 
-  // FIX: only update the store from `me` when we have a concrete result.
-  // A `me` returning null means "cookie is invalid" → clear AND let the
-  // redirect effect take over. With persist, the user object also comes
-  // from localStorage on first render so the page doesn't flash.
+  
   useEffect(() => {
     if (me.data) {
       setSession(me.data.user, me.data.workspaceId);

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -25,10 +25,16 @@ type Step2Values = z.infer<typeof LoginStep2Schema>;
 export default function SignInPage() {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
+  const user = useAuthStore((s) => s.user);
 
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [showPw, setShowPw] = useState(false);
+
+  
+  useEffect(() => {
+    if (user) router.replace('/dashboard');
+  }, [user, router]);
 
   const step1Form = useForm<Step1Values>({
     resolver: zodResolver(LoginStep1Schema),
@@ -44,7 +50,8 @@ export default function SignInPage() {
     onSuccess: (res) => {
       setSession(res.user, res.workspaceId);
       toast.success(`Welcome back, ${res.user.name.split(' ')[0]}`);
-      router.push('/dashboard');
+     
+      router.replace('/dashboard');
     },
     onError: (err) => {
       const code = (err.data as { code?: string } | undefined)?.code;
@@ -71,9 +78,7 @@ export default function SignInPage() {
     <AuthSplitLayout
       title="Sign in"
       subtitle={
-        <>
-          Sign in to open your workspace, forms, themes, and saved templates in one place.
-        </>
+        <>Sign in to open your workspace, forms, themes, and saved templates in one place.</>
       }
       footer={
         <>
@@ -157,13 +162,9 @@ export default function SignInPage() {
 
           <Button type="submit" className="w-full" size="lg" disabled={login.isPending}>
             {login.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Signing in…
-              </>
+              <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</>
             ) : (
-              <>
-                Sign in <ArrowRight className="h-4 w-4" />
-              </>
+              <>Sign in <ArrowRight className="h-4 w-4" /></>
             )}
           </Button>
         </form>
