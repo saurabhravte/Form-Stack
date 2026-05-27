@@ -1,5 +1,17 @@
 {
   "extends": "@formstack/typescript-config/base.json",
-  "include": ["src"],
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
