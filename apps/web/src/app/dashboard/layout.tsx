@@ -14,7 +14,6 @@ import {
   Sparkles,
   Users,
   X,
-  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,14 +26,14 @@ import { cn } from '@/lib/cn';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+// FIX: removed broken Integrations/Team links (no pages exist),
+// and dropped the bogus ?filter=responses query on Responses.
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/forms', label: 'My Forms', icon: FileText },
-  { href: '/dashboard/forms?filter=responses', label: 'Responses', icon: Users },
+  { href: '/dashboard/forms', label: 'Responses', icon: Users },
   { href: '/dashboard/themes', label: 'Templates', icon: Palette },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/themes', label: 'Integrations', icon: Zap },
-  { href: '/dashboard/themes', label: 'Team', icon: Users },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -44,19 +43,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, setSession, clear, markHydrated, hydrated } = useAuthStore();
 
-  const me = trpc.auth.me.useQuery(undefined, { staleTime: 30_000 });
+  const me = trpc.auth.me.useQuery(undefined, { staleTime: 30_000, retry: 1 });
+
+  // FIX: only update the store from `me` when we have a concrete result.
+  // A `me` returning null means "cookie is invalid" → clear AND let the
+  // redirect effect take over. With persist, the user object also comes
+  // from localStorage on first render so the page doesn't flash.
   useEffect(() => {
     if (me.data) {
       setSession(me.data.user, me.data.workspaceId);
-    } else if (me.isFetched && !me.data) {
+    } else if (me.isFetched && me.data === null) {
       clear();
     }
     if (me.isFetched) markHydrated();
   }, [me.data, me.isFetched, setSession, clear, markHydrated]);
 
+  // FIX: redirect only after `me` has resolved AND there's still no user.
+  // Previously this could fire mid-login because hydrated flipped early.
   useEffect(() => {
-    if (hydrated && !user) router.replace('/auth/sign-in');
-  }, [hydrated, user, router]);
+    if (hydrated && me.isFetched && !user) {
+      router.replace('/auth/sign-in');
+    }
+  }, [hydrated, me.isFetched, user, router]);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -67,11 +75,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     onSuccess: () => {
       clear();
       toast.success('Signed out');
-      router.push('/');
+      router.replace('/');
     },
   });
 
-  if (!hydrated) {
+  // Only show the loader before the store has rehydrated AND we have no user.
+  if (!hydrated && !user) {
     return (
       <div className="min-h-screen grid place-items-center text-muted-foreground text-sm">
         Loading workspace…
@@ -89,10 +98,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         !isFullBleed && 'lg:grid lg:grid-cols-[260px_1fr]',
       )}
     >
-      {/* SIDEBAR (left, per Postform layout) */}
       {!isFullBleed && (
         <>
-          {/* Mobile overlay */}
           {mobileOpen && (
             <div
               className="lg:hidden fixed inset-0 bg-black/50 z-40"
@@ -126,9 +133,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {NAV.map((item, idx) => {
                 const active =
                   pathname === item.href ||
-                  (item.href !== '/dashboard' &&
-                    !item.href.includes('?') &&
-                    pathname?.startsWith(item.href));
+                  (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                 const Icon = item.icon;
                 return (
                   <Link
@@ -148,7 +153,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-            {/* "Good forms ask great questions" doodle card */}
             <div className="p-3">
               <div className="relative rounded-xl border-2 border-dashed border-foreground/30 bg-pastel-butter p-4">
                 <div className="absolute -top-2 left-4 h-3 w-12 bg-accent-violet/60 rounded-sm rotate-[-6deg]" />
@@ -181,9 +185,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </>
       )}
 
-      {/* MAIN COLUMN */}
       <div className="flex flex-col min-w-0">
-        {/* Top bar */}
         {!isFullBleed && (
           <div className="h-16 border-b border-border flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-background/95 backdrop-blur z-30">
             <button
@@ -223,7 +225,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        {/* Mobile full-bleed top bar fallback */}
         {isFullBleed && (
           <div className="lg:hidden h-14 border-b border-border flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur z-30">
             <Link href="/dashboard" className="flex items-center gap-2">
