@@ -33,6 +33,7 @@ function slugify(s: string) {
 
 export default function SignUpPage() {
   const router = useRouter();
+  const utils = trpc.useUtils();
   const setSession = useAuthStore((s) => s.setSession);
 
   const [step, setStep] = useState(0);
@@ -55,6 +56,10 @@ export default function SignUpPage() {
   const register = trpc.auth.register.useMutation({
     onSuccess: (res) => {
       setSession(res.user, res.workspaceId);
+      // Seed the auth.me cache so the dashboard guard doesn't act on a
+      // stale `null` (cached by the site header while logged out) and
+      // bounce the user straight back to the sign-in page.
+      utils.auth.me.setData(undefined, { user: res.user, workspaceId: res.workspaceId });
       toast.success(`Workspace ${step3.getValues('workspaceSlug')} created`);
       router.push('/dashboard');
     },

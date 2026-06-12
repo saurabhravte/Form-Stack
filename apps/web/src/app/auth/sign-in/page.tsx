@@ -24,6 +24,7 @@ type Step2Values = z.infer<typeof LoginStep2Schema>;
 
 export default function SignInPage() {
   const router = useRouter();
+  const utils = trpc.useUtils();
   const setSession = useAuthStore((s) => s.setSession);
   const user = useAuthStore((s) => s.user);
 
@@ -49,6 +50,9 @@ export default function SignInPage() {
   const login = trpc.auth.login.useMutation({
     onSuccess: (res) => {
       setSession(res.user, res.workspaceId);
+      // Seed the auth.me cache so the dashboard guard doesn't act on a
+      // stale `null` and bounce the user back to sign-in.
+      utils.auth.me.setData(undefined, { user: res.user, workspaceId: res.workspaceId });
       toast.success(`Welcome back, ${res.user.name.split(' ')[0]}`);
      
       router.replace('/dashboard');

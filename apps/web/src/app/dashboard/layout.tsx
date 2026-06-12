@@ -42,25 +42,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, setSession, clear, markHydrated, hydrated } = useAuthStore();
 
-  const me = trpc.auth.me.useQuery(undefined, { staleTime: 30_000, retry: 1 });
+  const me = trpc.auth.me.useQuery(undefined, {
+    staleTime: 30_000,
+    retry: 1,
+    // Always verify the session against the server when entering the
+    // dashboard, instead of trusting a possibly-stale cached value.
+    refetchOnMount: 'always',
+  });
 
   
   useEffect(() => {
     if (me.data) {
       setSession(me.data.user, me.data.workspaceId);
-    } else if (me.isFetched && me.data === null) {
+    } else if (me.data === null && !me.isFetching) {
+      // Only clear when the `null` comes from a completed, fresh fetch —
+      // never from a stale cache entry written while logged out.
       clear();
     }
     if (me.isFetched) markHydrated();
-  }, [me.data, me.isFetched, setSession, clear, markHydrated]);
+  }, [me.data, me.isFetched, me.isFetching, setSession, clear, markHydrated]);
 
-  // FIX: redirect only after `me` has resolved AND there's still no user.
-  // Previously this could fire mid-login because hydrated flipped early.
+  // Redirect only after `me` has freshly resolved AND there's still no user.
   useEffect(() => {
-    if (hydrated && me.isFetched && !user) {
+    if (hydrated && me.isFetched && !me.isFetching && !user) {
       router.replace('/auth/sign-in');
     }
-  }, [hydrated, me.isFetched, user, router]);
+  }, [hydrated, me.isFetched, me.isFetching, user, router]);
 
   // Close mobile drawer on route change
   useEffect(() => {
