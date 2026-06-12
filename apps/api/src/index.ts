@@ -1,10 +1,4 @@
-
-
-
-import { config } from 'dotenv';
-import path from 'node:path';
-config({ path: path.resolve(__dirname, '../../../.env') });
-config();
+import './env';
 
 import { apiReference } from '@scalar/express-api-reference';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
