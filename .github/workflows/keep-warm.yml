@@ -1,0 +1,24 @@
+name: Keep API warm
+
+# Render's free tier spins the service down after ~15 min of inactivity and
+# Neon's free Postgres suspends after ~5 min. This pings the deep health
+# endpoint (which runs `select 1`) so both stay awake and users never hit a
+# 30-60s cold start.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping deep health endpoint
+        run: |
+          code=$(curl -s -o /tmp/body -w "%{http_code}" -m 120 \
+            https://form-stack-api.onrender.com/health/deep)
+          echo "HTTP $code"
+          cat /tmp/body
+          [ "$code" = "200" ]

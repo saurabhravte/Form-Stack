@@ -7,6 +7,10 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 
+import { sql } from 'drizzle-orm';
+
+import { db } from './db';
+
 import {
   errorHandler,
   loginLimiter,
@@ -56,6 +60,17 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: Date.now() }));
+
+app.get('/health/deep', async (_req, res) => {
+  try {
+    const t0 = Date.now();
+    await db.execute(sql`select 1`);
+    res.json({ status: 'ok', dbMs: Date.now() - t0, ts: Date.now() });
+  } catch (err) {
+    console.error('[health/deep]', err);
+    res.status(503).json({ status: 'db_unreachable', ts: Date.now() });
+  }
+});
 
 // --- Targeted rate limits (applied BEFORE the tRPC mount) -----------------
 // tRPC procedures map to URL paths like `/trpc/auth.login`, `/trpc/auth.register`,

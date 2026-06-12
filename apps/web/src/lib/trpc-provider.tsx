@@ -2,12 +2,18 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import superjson from 'superjson';
 
 import { API_URL, trpc } from '@/lib/trpc';
 
 export function TRPCProvider({ children }: { children: ReactNode }) {
+useEffect(() => {
+    fetch(`${API_URL}/health/deep`, { mode: 'cors' }).catch(() => {
+      /* best-effort — ignore failures */
+    });
+  }, []);
+
   const [queryClient] = useState(
     () =>
       new QueryClient({

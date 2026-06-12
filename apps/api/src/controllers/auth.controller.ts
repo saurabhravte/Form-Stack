@@ -186,18 +186,18 @@ export class AuthController extends BaseController {
     }
 
     const tokenHash = this.hashToken(token);
-    const [session] = await db
-      .select()
+    
+    const [row] = await db
+      .select({ session: sessions, user: users })
       .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
       .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt)))
       .limit(1);
-    if (!session) throw ApiError.unauthorized('Session no longer valid');
-    if (session.expiresAt < new Date()) throw ApiError.unauthorized('Session expired');
+    if (!row) throw ApiError.unauthorized('Session no longer valid');
+    if (row.session.expiresAt < new Date()) throw ApiError.unauthorized('Session expired');
+    if (row.user.id !== payload.sub) throw ApiError.unauthorized();
 
-    const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1);
-    if (!user) throw ApiError.unauthorized();
-
-    return user;
+    return row.user;
   }
 
   // ---- internals -------------------------------------------------
