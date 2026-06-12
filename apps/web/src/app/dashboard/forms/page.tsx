@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, Eye, FileText, Plus, Search } from 'lucide-react';
+import { ArrowUpRight, BarChart3, Eye, FileText, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -88,8 +88,11 @@ export default function FormsListPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((f) => (
-          <Link key={f.id} href={`/dashboard/forms/${f.id}`} className="group">
-            <Card className="h-full p-5 hover:border-foreground/30 hover:-translate-y-0.5 transition-all">
+          <Card
+            key={f.id}
+            className="h-full p-5 hover:border-foreground/30 hover:-translate-y-0.5 transition-all flex flex-col group"
+          >
+            <Link href={`/dashboard/forms/${f.id}`} className="flex-1 block">
               <div className="flex items-start justify-between mb-3">
                 <Badge
                   variant={f.status === 'published' ? 'success' : f.status === 'archived' ? 'warning' : 'secondary'}
@@ -102,14 +105,22 @@ export default function FormsListPage() {
               <p className="text-sm text-muted-foreground line-clamp-2 mb-4 min-h-[2.5rem]">
                 {f.description || '— no description —'}
               </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="h-3 w-3" /> {f.responseCount} responses
-                </span>
-                <span className="capitalize">{f.visibility}</span>
-              </div>
-            </Card>
-          </Link>
+            </Link>
+            <div className="flex items-center justify-between text-xs pt-3 border-t border-border">
+              <Link
+                href={`/dashboard/forms/${f.id}/responses`}
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Eye className="h-3 w-3" /> {f.responseCount} responses
+              </Link>
+              <Link
+                href={`/dashboard/forms/${f.id}/analytics`}
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <BarChart3 className="h-3 w-3" /> Analytics
+              </Link>
+            </div>
+          </Card>
         ))}
       </div>
     </div>

@@ -9,11 +9,19 @@ import {
   FileText,
   Layout,
   MessageSquare,
-  MoreVertical,
   Plus,
   Share2,
   Upload,
   Users,
+
+  
+  Clock,
+  
+ 
+  
+  Sparkles,
+  TrendingUp,
+  
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -138,22 +146,23 @@ export default function DashboardPage() {
 
             <div className="space-y-2">
               {recentForms.map((f, i) => (
-                <Link
+                <div
                   key={f.id}
-                  href={`/dashboard/forms/${f.id}`}
                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/60 transition-colors group"
                 >
-                  <div
-                    className={`h-11 w-11 rounded-lg grid place-items-center text-foreground/80 bg-pastel-${PASTEL[i % PASTEL.length]}`}
-                  >
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{f.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {f.responseCount} responses
+                  <Link href={`/dashboard/forms/${f.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div
+                      className={`h-11 w-11 rounded-lg grid place-items-center text-foreground/80 bg-pastel-${PASTEL[i % PASTEL.length]}`}
+                    >
+                      <FileText className="h-5 w-5" />
                     </div>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{f.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {f.responseCount} responses
+                      </div>
+                    </div>
+                  </Link>
                   <Badge
                     variant={
                       f.status === 'published'
@@ -166,13 +175,15 @@ export default function DashboardPage() {
                   >
                     {f.status}
                   </Badge>
-                  <button
-                    className="p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => e.preventDefault()}
+                  <Link
+                    href={`/dashboard/forms/${f.id}/analytics`}
+                    className="p-1.5 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Analytics for ${f.title}`}
+                    title="View analytics"
                   >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </Link>
+                    <BarChart3 className="h-4 w-4" />
+                  </Link>
+                </div>
               ))}
             </div>
           </div>
