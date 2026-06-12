@@ -61,10 +61,50 @@ const t = initTRPC.context<Ctx>().create({
 });
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
+
+/**
+ * Maps the backend's `ApiError` onto the matching tRPC error code so that
+ * operational 4xx errors (409 conflict, 404 not found, 401, ...) are NOT
+ * reported as INTERNAL_SERVER_ERROR. Without this, a routine "workspace URL
+ * is taken" 409 goes out to the client as a 500 and is logged with a full
+ * stack trace by the `onError` handler in index.ts.
+ */
+type TrpcCode = ConstructorParameters<typeof TRPCError>[0]['code'];
+
+const STATUS_TO_TRPC: Record<number, TrpcCode> = {
+  400: 'BAD_REQUEST',
+  401: 'UNAUTHORIZED',
+  403: 'FORBIDDEN',
+  404: 'NOT_FOUND',
+  405: 'METHOD_NOT_SUPPORTED',
+  408: 'TIMEOUT',
+  409: 'CONFLICT',
+  412: 'PRECONDITION_FAILED',
+  413: 'PAYLOAD_TOO_LARGE',
+  422: 'UNPROCESSABLE_CONTENT',
+  429: 'TOO_MANY_REQUESTS',
+  500: 'INTERNAL_SERVER_ERROR',
+};
+
+const errorMapper = t.middleware(async ({ next }) => {
+  try {
+    return await next();
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new TRPCError({
+        code: STATUS_TO_TRPC[err.statusCode] ?? 'INTERNAL_SERVER_ERROR',
+        message: err.message,
+        cause: err,
+      });
+    }
+    throw err;
+  }
+});
+
+export const publicProcedure = t.procedure.use(errorMapper);
 
 /** Requires an authenticated user; injects `ctx.user` as non-null. */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: 'UNAUTHORIZED', cause: ApiError.unauthorized() });
   return next({ ctx: { ...ctx, user: ctx.user } });
 });

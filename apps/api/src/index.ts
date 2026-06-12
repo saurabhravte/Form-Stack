@@ -78,7 +78,14 @@ app.use(
     router: appRouter,
     createContext,
     onError({ error, path }) {
-      if (error.code === 'INTERNAL_SERVER_ERROR') {
+      // Only log genuine, non-operational faults. Operational ApiErrors
+      // (409, 404, 401, ...) are expected and shouldn't spam the logs.
+      const cause = error.cause;
+      const isOperational =
+        cause && typeof cause === 'object' && 'isOperational' in cause
+          ? Boolean((cause as { isOperational?: boolean }).isOperational)
+          : false;
+      if (error.code === 'INTERNAL_SERVER_ERROR' && !isOperational) {
         console.error(`[trpc:${path}]`, error);
       }
     },
